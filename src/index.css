@@ -11,11 +11,62 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    --vh: 1vh;
   }
-  
+
   body {
     margin: 0;
     min-width: 320px;
-    min-height: 100vh;
+  }
+
+  /* Prevent viewport resize on keyboard open */
+  html {
+    height: 100%;
+    overflow: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  body {
+    height: 100%;
+    overflow: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #root {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* Custom viewport height that accounts for mobile browser UI */
+  .h-screen-safe {
+    height: 100vh;
+    height: calc(var(--vh, 1vh) * 100);
+    position: relative;
+  }
+
+  /* Prevent input zoom on iOS */
+  input, textarea, select {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  /* Prevent scrolling when focused */
+  input:focus, textarea:focus, select:focus {
+    position: relative;
+    transform: translateZ(0);
+  }
+  
+  /* Better handling of overflow scrolling */
+  .overscroll-none {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent bounce effect on iOS */
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
 }

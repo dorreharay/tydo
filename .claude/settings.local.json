@@ -6,7 +6,10 @@
       "Bash(pnpm remove:*)",
       "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }
