@@ -18,7 +18,7 @@ interface SalesData {
   returningCustomers?: number;
 }
 
-const generateSalesData = (period: 'week' | 'month' | 'quarter', type: 'sales' | 'products' | 'customers' | 'general' = 'sales'): SalesData[] => {
+const generateSalesData = (period: 'week' | 'month' | 'quarter'): SalesData[] => {
   const now = dayjs();
   const data: SalesData[] = [];
   
@@ -97,7 +97,7 @@ export function SalesDataVisualization({
   visualizationType = 'sales'
 }: SalesDataVisualizationProps) {
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>(defaultPeriod);
-  const salesData = generateSalesData(period, visualizationType);
+  const salesData = generateSalesData(period);
   
   const totalRevenue = salesData.reduce((sum, day) => sum + day.revenue, 0);
   const totalUnits = salesData.reduce((sum, day) => sum + day.units, 0);

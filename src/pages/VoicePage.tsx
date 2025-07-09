@@ -3,8 +3,6 @@ import {
   History,
   MessageSquare,
   SquircleDashed,
-  ArrowRight,
-  BetweenHorizontalStart,
   StepForward,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
