@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
-import { MessageSquareDashed, Send } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { MessageSquareDashed, Send, AudioLines } from 'lucide-react';
 import { cn } from '@lib/utils';
 import Header from '@/components/Header';
 import dayjs from 'dayjs';
 import { SalesDataVisualization } from '@components/SalesDataVisualization';
+import { useVoice } from '@contexts/VoiceContext';
+import { useNavigate } from 'react-router-dom';
 
 interface Message {
   id: string;
@@ -16,62 +18,30 @@ interface Message {
 }
 
 function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: 'Welcome to Tydo Chat! How can I help you today?',
-      role: 'assistant',
-      timestamp: new Date(),
-    },
-  ]);
+  const navigate = useNavigate();
+  const { lastTranscription, setLastTranscription, setShouldStartRecording } = useVoice();
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // If we have a voice transcription, don't show welcome message
+    if (lastTranscription) {
+      return [];
+    }
+    return [
+      {
+        id: '1',
+        content: 'Welcome to Tydo Chat! How can I help you today?',
+        role: 'assistant',
+        timestamp: new Date(),
+      },
+    ];
+  });
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const processedTranscriptionRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // Prevent default scrolling behavior on input focus
-    const handleFocus = (e: FocusEvent) => {
-      if (e.target === inputRef.current) {
-        e.preventDefault();
-        // Keep the view fixed
-        window.scrollTo(0, 0);
-        document.body.scrollTop = 0;
-        document.documentElement.scrollTop = 0;
-
-        if (containerRef.current) {
-          containerRef.current.scrollTop = 0;
-        }
-      }
-    };
-
-    const input = inputRef.current;
-    if (input) {
-      input.addEventListener('focus', handleFocus, { passive: false });
-      input.addEventListener('click', handleFocus, { passive: false });
-    }
-
-    return () => {
-      if (input) {
-        input.removeEventListener('focus', handleFocus);
-        input.removeEventListener('click', handleFocus);
-      }
-    };
-  }, []);
-
-  const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: inputValue,
-      role: 'user',
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    const userQuery = inputValue.toLowerCase();
-    setInputValue('');
+  const handleAIResponse = useCallback((query: string) => {
+    const userQuery = query.toLowerCase();
     setIsLoading(true);
 
     // Simulate AI response
@@ -80,7 +50,8 @@ function ChatPage() {
                           userQuery.includes('revenue') || 
                           userQuery.includes('business') ||
                           userQuery.includes('performance') ||
-                          userQuery.includes('results');
+                          userQuery.includes('results') ||
+                          userQuery.includes('campaign');
       
       const isProductQuery = userQuery.includes('product') || 
                             userQuery.includes('inventory') || 
@@ -128,6 +99,80 @@ function ChatPage() {
       setMessages(prev => [...prev, assistantMessage]);
       setIsLoading(false);
     }, 1000);
+  }, []);
+
+  useEffect(() => {
+    // Prevent default scrolling behavior on input focus
+    const handleFocus = (e: FocusEvent) => {
+      if (e.target === inputRef.current) {
+        e.preventDefault();
+        // Keep the view fixed
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+
+        if (containerRef.current) {
+          containerRef.current.scrollTop = 0;
+        }
+      }
+    };
+
+    const input = inputRef.current;
+    if (input) {
+      input.addEventListener('focus', handleFocus, { passive: false });
+      input.addEventListener('click', handleFocus, { passive: false });
+    }
+
+    return () => {
+      if (input) {
+        input.removeEventListener('focus', handleFocus);
+        input.removeEventListener('click', handleFocus);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // Process voice transcription when coming from voice page
+    if (lastTranscription && processedTranscriptionRef.current !== lastTranscription.text) {
+      // Mark this transcription as processed
+      processedTranscriptionRef.current = lastTranscription.text;
+      
+      // Add the voice message to chat
+      const voiceMessage: Message = {
+        id: Date.now().toString(),
+        content: lastTranscription.text,
+        role: 'user',
+        timestamp: lastTranscription.timestamp,
+      };
+      
+      setMessages(prev => [...prev, voiceMessage]);
+      
+      // Trigger response with the transcription text
+      const transcriptionText = lastTranscription.text;
+      
+      // Clear the transcription
+      setLastTranscription(null);
+      
+      // Trigger response after clearing to avoid re-triggering
+      setTimeout(() => {
+        handleAIResponse(transcriptionText);
+      }, 500);
+    }
+  }, [lastTranscription, setLastTranscription, handleAIResponse]);
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim()) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: inputValue,
+      role: 'user',
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    handleAIResponse(inputValue);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -135,6 +180,13 @@ function ChatPage() {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleVoiceClick = () => {
+    // Set flag to start recording when voice page loads
+    setShouldStartRecording(true);
+    // Navigate to voice page
+    navigate('/');
   };
 
   return (
@@ -210,6 +262,12 @@ function ChatPage() {
 
         <div className="w-full p-4 border-t dark:border-stone-800 dark:bg-stone-900 bg-stone-200 border-stone-100">
           <div className="flex gap-2">
+            <button
+              onClick={handleVoiceClick}
+              className="p-3 transition-colors bg-white rounded-full dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700"
+            >
+              <AudioLines className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+            </button>
             <input
               ref={inputRef}
               type="text"

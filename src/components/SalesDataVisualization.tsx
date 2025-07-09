@@ -146,10 +146,10 @@ export function SalesDataVisualization({
                         <Line
                           type="monotone"
                           dataKey="revenue"
-                          stroke="var(--color-revenue)"
+                          stroke="#3b82f6"
                           strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
+                          dot={{ r: 4, fill: '#3b82f6' }}
+                          activeDot={{ r: 6, fill: '#3b82f6' }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -181,12 +181,12 @@ export function SalesDataVisualization({
                         />
                         <Bar
                           dataKey="units"
-                          fill="var(--color-units)"
+                          fill="#3b82f6"
                           radius={[8, 8, 0, 0]}
                         />
                         <Bar
                           dataKey="customers"
-                          fill="var(--color-customers)"
+                          fill="#10b981"
                           radius={[8, 8, 0, 0]}
                         />
                       </BarChart>
@@ -223,12 +223,12 @@ export function SalesDataVisualization({
                         />
                         <Bar
                           dataKey="products"
-                          fill="var(--color-products)"
+                          fill="#8b5cf6"
                           radius={[8, 8, 0, 0]}
                         />
                         <Bar
                           dataKey="returns"
-                          fill="var(--color-returns)"
+                          fill="#ef4444"
                           radius={[8, 8, 0, 0]}
                         />
                       </BarChart>
@@ -263,10 +263,10 @@ export function SalesDataVisualization({
                         <Line
                           type="monotone"
                           dataKey="avgOrderValue"
-                          stroke="var(--color-avgOrderValue)"
+                          stroke="#8b5cf6"
                           strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
+                          dot={{ r: 4, fill: '#8b5cf6' }}
+                          activeDot={{ r: 6, fill: '#8b5cf6' }}
                         />
                       </LineChart>
                     </ResponsiveContainer>
@@ -302,12 +302,12 @@ export function SalesDataVisualization({
                         />
                         <Bar
                           dataKey="newCustomers"
-                          fill="var(--color-newCustomers)"
+                          fill="#3b82f6"
                           radius={[8, 8, 0, 0]}
                         />
                         <Bar
                           dataKey="returningCustomers"
-                          fill="var(--color-returningCustomers)"
+                          fill="#10b981"
                           radius={[8, 8, 0, 0]}
                         />
                       </BarChart>
@@ -342,10 +342,10 @@ export function SalesDataVisualization({
                         <Line
                           type="monotone"
                           dataKey="avgOrderValue"
-                          stroke="var(--color-revenue)"
+                          stroke="#10b981"
                           strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
+                          dot={{ r: 4, fill: '#10b981' }}
+                          activeDot={{ r: 6, fill: '#10b981' }}
                         />
                       </LineChart>
                     </ResponsiveContainer>

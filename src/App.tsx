@@ -1,14 +1,17 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import VoicePage from '@/pages/VoicePage';
 import ChatPage from '@/pages/ChatPage';
+import { VoiceProvider } from '@/contexts/VoiceContext';
 
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<VoicePage />} />
-        <Route path="/chat" element={<ChatPage />} />
-      </Routes>
+      <VoiceProvider>
+        <Routes>
+          <Route path="/" element={<VoicePage />} />
+          <Route path="/chat" element={<ChatPage />} />
+        </Routes>
+      </VoiceProvider>
     </Router>
   );
 }

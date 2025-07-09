@@ -3,14 +3,16 @@ import {
   History,
   MessageSquare,
   SquircleDashed,
-  X,
+  ArrowRight,
+  BetweenHorizontalStart,
+  StepForward,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@lib/utils';
 import Header from '@components/Header';
 import ActionButton from '@components/ActionButton';
-import { SalesDataVisualization } from '@components/SalesDataVisualization';
+import { useVoice } from '@contexts/VoiceContext';
 
 const suggestions = [
   { text: "How's my business doing?" },
@@ -20,23 +22,24 @@ const suggestions = [
 
 function VoicePage() {
   const navigate = useNavigate();
+  const {
+    setLastTranscription,
+    shouldStartRecording,
+    setShouldStartRecording,
+  } = useVoice();
   const [isLive, setIsLive] = useState(false);
   const [transcription, setTranscription] = useState<string>('');
   const [animatedTranscription, setAnimatedTranscription] =
     useState<string>('');
-  const [showResponse, setShowResponse] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
-  const salesSummary = {
-    title: 'Last Sales Campaign Results:',
-    points: [
-      '12% increase in total revenue',
-      '8% improvement in customer engagement',
-      '1,200+ units sold across all channels',
-      '25% higher conversion rate than previous campaign',
-      'New customer acquisition up by 15%',
-    ],
-  };
+  useEffect(() => {
+    // Check if we should start recording automatically
+    if (shouldStartRecording && !isLive) {
+      setShouldStartRecording(false);
+      handleClick();
+    }
+  }, [shouldStartRecording]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (isTranscribing && transcription) {
@@ -50,10 +53,7 @@ function VoicePage() {
         } else {
           clearInterval(interval);
           setIsTranscribing(false);
-          // Show response after transcription completes
-          setTimeout(() => {
-            setShowResponse(true);
-          }, 500);
+          // Keep the voice input open - user must click finish
         }
       }, 150); // 150ms between each word
 
@@ -66,7 +66,6 @@ function VoicePage() {
       setIsLive(true);
       setTranscription('');
       setAnimatedTranscription('');
-      setShowResponse(false);
 
       // Simulate listening and then transcribing
       setTimeout(() => {
@@ -75,21 +74,36 @@ function VoicePage() {
         setIsTranscribing(true);
       }, 2000); // 2 seconds of "listening"
     } else {
-      // Reset everything
-      setIsLive(false);
-      setTranscription('');
-      setAnimatedTranscription('');
-      setShowResponse(false);
-      setIsTranscribing(false);
+      // When clicking finish, navigate to chat with the transcription
+      if (transcription) {
+        handleContinueInChat();
+      } else {
+        // If no transcription, just close
+        setIsLive(false);
+        setTranscription('');
+        setAnimatedTranscription('');
+        setIsTranscribing(false);
+      }
     }
   };
 
   const handleTranscription = (text: string) => {
-    setIsLive(true);
-    setTranscription(text);
-    setAnimatedTranscription('');
-    setShowResponse(false);
-    setIsTranscribing(true);
+    // Go directly to chat with the suggestion text
+    setLastTranscription({
+      text: text,
+      timestamp: new Date(),
+    });
+    navigate('/chat');
+  };
+
+  const handleContinueInChat = () => {
+    if (transcription) {
+      setLastTranscription({
+        text: transcription,
+        timestamp: new Date(),
+      });
+      navigate('/chat');
+    }
   };
 
   return (
@@ -106,7 +120,7 @@ function VoicePage() {
           </>
         </Header>
 
-        <div className="flex flex-col items-center px-6 pb-[15vh] my-auto max-h-[65vh] overflow-auto">
+        <div className="flex flex-col items-center px-6 pb-[15vh] my-auto max-h-[70vh] overflow-auto">
           {isLive ? (
             !transcription && !animatedTranscription ? (
               <div className="flex flex-col items-center">
@@ -124,42 +138,6 @@ function VoicePage() {
                         <span className="animate-pulse">|</span>
                       )}
                     </h3>
-                  </div>
-                )}
-
-                {showResponse && (
-                  <div className="space-y-6 animate-fade-in animate-duration-500">
-                    <div className="p-6 bg-stone-100 dark:bg-stone-800 rounded-2xl">
-                      <h4 className="mb-4 text-lg text-gray-900 font-euclid-m dark:text-gray-100">
-                        {salesSummary.title}
-                      </h4>
-                      <ul className="space-y-2">
-                        {salesSummary.points.map((point, index) => (
-                          <li
-                            key={index}
-                            className="flex items-start text-gray-700 text-md font-euclid dark:text-gray-300"
-                            style={{ animationDelay: `${index * 100}ms` }}
-                          >
-                            <span className="mr-2 text-green-600 dark:text-green-400">
-                              •
-                            </span>
-                            <span className="animate-fade-in animate-duration-300">
-                              {point}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div
-                      className="animate-fade-in animate-duration-700"
-                      style={{ animationDelay: '500ms' }}
-                    >
-                      <SalesDataVisualization
-                        showTable={false}
-                        defaultPeriod="month"
-                      />
-                    </div>
                   </div>
                 )}
               </div>
@@ -196,13 +174,18 @@ function VoicePage() {
               </ActionButton>
             )}
             <ActionButton
-              className={{
-                'bg-rose-800 dark:bg-rose-900': isLive,
-              }}
-              onClick={handleClick}
+              className={cn({
+                'w-3/4 h-10 rounded-xl': isLive,
+                'bg-rose-800 dark:bg-rose-800': isLive && transcription,
+                'bg-gray-400 dark:bg-gray-600 cursor-not-allowed opacity-50': isLive && !transcription,
+              })}
+              onClick={(isLive && transcription) || !isLive ? handleClick : undefined}
             >
               {isLive ? (
-                <X className={cn('w-8 h-8', { 'text-white': isLive })} />
+                <div className="flex items-center justify-center gap-1 text-lg text-white font-euclid-m">
+                  Continue
+                  <StepForward />
+                </div>
               ) : (
                 <AudioLines className="w-8 h-8" />
               )}
