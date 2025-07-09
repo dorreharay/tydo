@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@lib/utils';
 import Header from '@components/Header';
 import ActionButton from '@components/ActionButton';
+import { SalesDataVisualization } from '@components/SalesDataVisualization';
 
 const suggestions = [
   { text: "How's my business doing?" },
@@ -105,7 +106,7 @@ function VoicePage() {
           </>
         </Header>
 
-        <div className="flex flex-col items-center px-6 pb-[10vh] my-auto">
+        <div className="flex flex-col items-center px-6 pb-[15vh] my-auto max-h-[65vh] overflow-auto">
           {isLive ? (
             !transcription && !animatedTranscription ? (
               <div className="flex flex-col items-center">
@@ -127,26 +128,38 @@ function VoicePage() {
                 )}
 
                 {showResponse && (
-                  <div className="p-6 mt-6 bg-stone-100 dark:bg-stone-800 rounded-2xl animate-fade-in animate-duration-500">
-                    <h4 className="mb-4 text-lg text-gray-900 font-euclid-m dark:text-gray-100">
-                      {salesSummary.title}
-                    </h4>
-                    <ul className="space-y-2">
-                      {salesSummary.points.map((point, index) => (
-                        <li
-                          key={index}
-                          className="flex items-start text-gray-700 text-md font-euclid dark:text-gray-300"
-                          style={{ animationDelay: `${index * 100}ms` }}
-                        >
-                          <span className="mr-2 text-green-600 dark:text-green-400">
-                            •
-                          </span>
-                          <span className="animate-fade-in animate-duration-300">
-                            {point}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="space-y-6 animate-fade-in animate-duration-500">
+                    <div className="p-6 bg-stone-100 dark:bg-stone-800 rounded-2xl">
+                      <h4 className="mb-4 text-lg text-gray-900 font-euclid-m dark:text-gray-100">
+                        {salesSummary.title}
+                      </h4>
+                      <ul className="space-y-2">
+                        {salesSummary.points.map((point, index) => (
+                          <li
+                            key={index}
+                            className="flex items-start text-gray-700 text-md font-euclid dark:text-gray-300"
+                            style={{ animationDelay: `${index * 100}ms` }}
+                          >
+                            <span className="mr-2 text-green-600 dark:text-green-400">
+                              •
+                            </span>
+                            <span className="animate-fade-in animate-duration-300">
+                              {point}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div
+                      className="animate-fade-in animate-duration-700"
+                      style={{ animationDelay: '500ms' }}
+                    >
+                      <SalesDataVisualization
+                        showTable={false}
+                        defaultPeriod="month"
+                      />
+                    </div>
                   </div>
                 )}
               </div>

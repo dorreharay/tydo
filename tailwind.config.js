@@ -29,6 +29,15 @@ export default {
       animation: {
         bounce: 'bounce 1s infinite',
       },
+      colors: {
+        chart: {
+          1: 'oklch(var(--chart-1))',
+          2: 'oklch(var(--chart-2))',
+          3: 'oklch(var(--chart-3))',
+          4: 'oklch(var(--chart-4))',
+          5: 'oklch(var(--chart-5))',
+        },
+      },
     },
   },
   plugins: [

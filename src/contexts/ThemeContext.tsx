@@ -24,14 +24,11 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
-  const [theme, setTheme] = useState<Theme>('dark');
-
-  useEffect(() => {
+  // Initialize theme from localStorage or default to 'dark'
+  const [theme, setTheme] = useState<Theme>(() => {
     const savedTheme = localStorage.getItem('theme') as Theme;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
-  }, []);
+    return savedTheme || 'dark';
+  });
 
   useEffect(() => {
     const root = window.document.documentElement;

@@ -3,12 +3,16 @@ import { MessageSquareDashed, Send } from 'lucide-react';
 import { cn } from '@lib/utils';
 import Header from '@/components/Header';
 import dayjs from 'dayjs';
+import { SalesDataVisualization } from '@components/SalesDataVisualization';
 
 interface Message {
   id: string;
   content: string;
   role: 'user' | 'assistant';
   timestamp: Date;
+  showChart?: boolean;
+  chartPeriod?: 'week' | 'month' | 'quarter';
+  visualizationType?: 'sales' | 'products' | 'customers' | 'general';
 }
 
 function ChatPage() {
@@ -34,7 +38,7 @@ function ChatPage() {
         window.scrollTo(0, 0);
         document.body.scrollTop = 0;
         document.documentElement.scrollTop = 0;
-        
+
         if (containerRef.current) {
           containerRef.current.scrollTop = 0;
         }
@@ -66,16 +70,60 @@ function ChatPage() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const userQuery = inputValue.toLowerCase();
     setInputValue('');
     setIsLoading(true);
 
     // Simulate AI response
     setTimeout(() => {
+      const isSalesQuery = userQuery.includes('sales') || 
+                          userQuery.includes('revenue') || 
+                          userQuery.includes('business') ||
+                          userQuery.includes('performance') ||
+                          userQuery.includes('results');
+      
+      const isProductQuery = userQuery.includes('product') || 
+                            userQuery.includes('inventory') || 
+                            userQuery.includes('stock');
+      
+      const isCustomerQuery = userQuery.includes('customer') || 
+                             userQuery.includes('client') || 
+                             userQuery.includes('user');
+      
+      let period: 'week' | 'month' | 'quarter' = 'week';
+      if (userQuery.includes('month')) period = 'month';
+      if (userQuery.includes('quarter')) period = 'quarter';
+      
+      let content = '';
+      let showChart = false;
+      let visualizationType: 'sales' | 'products' | 'customers' | 'general' = 'general';
+      
+      if (isSalesQuery) {
+        content = `Here's your sales data analysis for the last ${period}. The charts show revenue trends and detailed performance metrics.`;
+        showChart = true;
+        visualizationType = 'sales';
+      } else if (isProductQuery) {
+        content = `I understand you're asking about products. Here's the product performance data for the last ${period}.`;
+        showChart = true;
+        visualizationType = 'products';
+      } else if (isCustomerQuery) {
+        content = `I understand you're asking about customers. Here's the customer analytics for the last ${period}.`;
+        showChart = true;
+        visualizationType = 'customers';
+      } else {
+        content = `I understand you're asking about "${userQuery}". Here's what I found for you.`;
+        showChart = true; // Always show charts after "I understand you're asking about"
+        visualizationType = 'general';
+      }
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `I understand you're asking about "${inputValue}". Based on your sales data, I can provide you with detailed analytics and insights.`,
+        content,
         role: 'assistant',
         timestamp: new Date(),
+        showChart,
+        chartPeriod: period,
+        visualizationType,
       };
       setMessages(prev => [...prev, assistantMessage]);
       setIsLoading(false);
@@ -90,7 +138,10 @@ function ChatPage() {
   };
 
   return (
-    <div ref={containerRef} className="h-screen-safe overflow-hidden text-gray-900 transition-all duration-100 dark:bg-stone-900 dark:text-gray-100">
+    <div
+      ref={containerRef}
+      className="overflow-hidden text-gray-900 transition-all duration-100 h-screen-safe dark:bg-stone-900 dark:text-gray-100"
+    >
       <div className="flex flex-col h-full pt-8 mx-auto">
         <div className="px-4">
           <Header canGoBack={true}>
@@ -101,37 +152,47 @@ function ChatPage() {
           </Header>
         </div>
 
-        <div className="flex flex-col gap-4 p-4 mt-6 overflow-y-auto flex-1 bg-stone-100 dark:bg-stone-800 rounded-t-3xl -webkit-overflow-scrolling-touch overscroll-none">
+        <div className="flex flex-col flex-1 gap-4 p-4 mt-6 overflow-y-auto bg-stone-100 dark:bg-stone-800 rounded-t-3xl -webkit-overflow-scrolling-touch overscroll-none">
           {messages.map(message => (
-            <div
-              key={message.id}
-              className={cn(
-                'flex',
-                message.role === 'user' ? 'justify-end' : 'justify-start'
-              )}
-            >
+            <div key={message.id} className="space-y-2">
               <div
                 className={cn(
-                  'flex flex-col max-w-[80%] p-3 rounded-2xl',
-                  message.role === 'user'
-                    ? 'bg-rose-800 text-white'
-                    : 'bg-stone-100 dark:bg-stone-900 text-gray-900 dark:text-gray-100'
+                  'flex',
+                  message.role === 'user' ? 'justify-end' : 'justify-start'
                 )}
               >
-                <p className="text-left text-md font-euclid">
-                  {message.content}
-                </p>
-                <p
+                <div
                   className={cn(
-                    'text-xs text-right',
+                    'flex flex-col max-w-[80%] p-3 rounded-2xl',
                     message.role === 'user'
-                      ? 'text-rose-100'
-                      : 'text-gray-500 dark:text-gray-400'
+                      ? 'bg-rose-800 text-white'
+                      : 'bg-stone-100 dark:bg-stone-900 text-gray-900 dark:text-gray-100'
                   )}
                 >
-                  {dayjs(message.timestamp).format('HH:mm')}
-                </p>
+                  <p className="text-left text-md font-euclid">
+                    {message.content}
+                  </p>
+                  <p
+                    className={cn(
+                      'text-xs text-right',
+                      message.role === 'user'
+                        ? 'text-rose-100'
+                        : 'text-gray-500 dark:text-gray-400'
+                    )}
+                  >
+                    {dayjs(message.timestamp).format('HH:mm')}
+                  </p>
+                </div>
               </div>
+              {message.showChart && message.role === 'assistant' && (
+                <div className="mt-4 animate-fade-in animate-duration-500">
+                  <SalesDataVisualization 
+                    showTable={true} 
+                    defaultPeriod={message.chartPeriod || 'week'}
+                    visualizationType={message.visualizationType || 'general'}
+                  />
+                </div>
+              )}
             </div>
           ))}
           {isLoading && (
@@ -147,7 +208,7 @@ function ChatPage() {
           )}
         </div>
 
-        <div className="w-full p-4 border-t dark:border-stone-800 bg-stone-900">
+        <div className="w-full p-4 border-t dark:border-stone-800 dark:bg-stone-900 bg-stone-200 border-stone-100">
           <div className="flex gap-2">
             <input
               ref={inputRef}
