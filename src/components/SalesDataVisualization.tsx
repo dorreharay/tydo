@@ -129,18 +129,18 @@ export function SalesDataVisualization({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ChartContainer config={chartConfig} className="h-[300px] w-full [&_.recharts-text]:fill-gray-600 dark:[&_.recharts-text]:fill-gray-300 [&_.recharts-cartesian-axis-line]:stroke-gray-300 dark:[&_.recharts-cartesian-axis-line]:stroke-gray-600 [&_.recharts-cartesian-axis-line]:opacity-50">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={salesData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(229 231 235)" className="dark:stroke-gray-700" opacity={0.5} />
                         <XAxis 
                           dataKey="date" 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                         />
                         <YAxis 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                           tickFormatter={(value) => `$${value}`}
                         />
                         <Line
@@ -166,18 +166,18 @@ export function SalesDataVisualization({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ChartContainer config={chartConfig} className="h-[300px] w-full [&_.recharts-text]:fill-gray-600 dark:[&_.recharts-text]:fill-gray-300 [&_.recharts-cartesian-axis-line]:stroke-gray-300 dark:[&_.recharts-cartesian-axis-line]:stroke-gray-600 [&_.recharts-cartesian-axis-line]:opacity-50">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={salesData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(229 231 235)" className="dark:stroke-gray-700" opacity={0.5} />
                         <XAxis 
                           dataKey="date" 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                         />
                         <YAxis 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                         />
                         <Bar
                           dataKey="units"
@@ -208,18 +208,18 @@ export function SalesDataVisualization({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ChartContainer config={chartConfig} className="h-[300px] w-full [&_.recharts-text]:fill-gray-600 dark:[&_.recharts-text]:fill-gray-300 [&_.recharts-cartesian-axis-line]:stroke-gray-300 dark:[&_.recharts-cartesian-axis-line]:stroke-gray-600 [&_.recharts-cartesian-axis-line]:opacity-50">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={salesData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(229 231 235)" className="dark:stroke-gray-700" opacity={0.5} />
                         <XAxis 
                           dataKey="date" 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                         />
                         <YAxis 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                         />
                         <Bar
                           dataKey="products"
@@ -246,18 +246,18 @@ export function SalesDataVisualization({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ChartContainer config={chartConfig} className="h-[300px] w-full [&_.recharts-text]:fill-gray-600 dark:[&_.recharts-text]:fill-gray-300 [&_.recharts-cartesian-axis-line]:stroke-gray-300 dark:[&_.recharts-cartesian-axis-line]:stroke-gray-600 [&_.recharts-cartesian-axis-line]:opacity-50">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={salesData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(229 231 235)" className="dark:stroke-gray-700" opacity={0.5} />
                         <XAxis 
                           dataKey="date" 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                         />
                         <YAxis 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                           tickFormatter={(value) => `$${value}`}
                         />
                         <Line
@@ -287,18 +287,18 @@ export function SalesDataVisualization({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ChartContainer config={chartConfig} className="h-[300px] w-full [&_.recharts-text]:fill-gray-600 dark:[&_.recharts-text]:fill-gray-300 [&_.recharts-cartesian-axis-line]:stroke-gray-300 dark:[&_.recharts-cartesian-axis-line]:stroke-gray-600 [&_.recharts-cartesian-axis-line]:opacity-50">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={salesData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(229 231 235)" className="dark:stroke-gray-700" opacity={0.5} />
                         <XAxis 
                           dataKey="date" 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                         />
                         <YAxis 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                         />
                         <Bar
                           dataKey="newCustomers"
@@ -325,18 +325,18 @@ export function SalesDataVisualization({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ChartContainer config={chartConfig} className="h-[300px] w-full [&_.recharts-text]:fill-gray-600 dark:[&_.recharts-text]:fill-gray-300 [&_.recharts-cartesian-axis-line]:stroke-gray-300 dark:[&_.recharts-cartesian-axis-line]:stroke-gray-600 [&_.recharts-cartesian-axis-line]:opacity-50">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={salesData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(229 231 235)" className="dark:stroke-gray-700" opacity={0.5} />
                         <XAxis 
                           dataKey="date" 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                         />
                         <YAxis 
                           className="text-xs"
-                          tick={{ fill: 'currentColor' }}
+                          tick={{ fill: 'rgb(156 163 175)', className: 'dark:fill-gray-400' }}
                           tickFormatter={(value) => `$${value}`}
                         />
                         <Line
