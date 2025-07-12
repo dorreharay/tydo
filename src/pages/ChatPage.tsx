@@ -3,9 +3,10 @@ import { MessageSquareDashed, Send, AudioLines } from 'lucide-react';
 import { cn } from '@lib/utils';
 import Header from '@/components/Header';
 import dayjs from 'dayjs';
-import { SalesDataVisualization } from '@components/SalesDataVisualization';
 import { useVoice } from '@contexts/VoiceContext';
 import { useNavigate } from 'react-router-dom';
+import { MessageChart } from '@components/MessageChart';
+import type { ChartPeriod } from '@hooks/useChartData';
 
 interface Message {
   id: string;
@@ -13,18 +14,36 @@ interface Message {
   role: 'user' | 'assistant';
   timestamp: Date;
   showChart?: boolean;
-  chartPeriod?: 'week' | 'month' | 'quarter';
+  chartPeriod?: ChartPeriod;
   visualizationType?: 'sales' | 'products' | 'customers' | 'general';
 }
 
 function ChatPage() {
   const navigate = useNavigate();
-  const { lastTranscription, setLastTranscription, setShouldStartRecording } = useVoice();
+  const { lastTranscription, setLastTranscription, setShouldStartRecording } =
+    useVoice();
   const [messages, setMessages] = useState<Message[]>(() => {
+    // Try to load messages from localStorage
+    const savedMessages = localStorage.getItem('chatMessages');
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages);
+        // Convert timestamp strings back to Date objects
+        return parsed.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+      } catch (error) {
+        console.error('Error parsing saved messages:', error);
+      }
+    }
+
     // If we have a voice transcription, don't show welcome message
     if (lastTranscription) {
       return [];
     }
+
+    // Default welcome message
     return [
       {
         id: '1',
@@ -39,6 +58,7 @@ function ChatPage() {
   const processedTranscriptionRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const handleAIResponse = useCallback((query: string) => {
     const userQuery = query.toLowerCase();
@@ -46,29 +66,33 @@ function ChatPage() {
 
     // Simulate AI response
     setTimeout(() => {
-      const isSalesQuery = userQuery.includes('sales') || 
-                          userQuery.includes('revenue') || 
-                          userQuery.includes('business') ||
-                          userQuery.includes('performance') ||
-                          userQuery.includes('results') ||
-                          userQuery.includes('campaign');
-      
-      const isProductQuery = userQuery.includes('product') || 
-                            userQuery.includes('inventory') || 
-                            userQuery.includes('stock');
-      
-      const isCustomerQuery = userQuery.includes('customer') || 
-                             userQuery.includes('client') || 
-                             userQuery.includes('user');
-      
+      const isSalesQuery =
+        userQuery.includes('sales') ||
+        userQuery.includes('revenue') ||
+        userQuery.includes('business') ||
+        userQuery.includes('performance') ||
+        userQuery.includes('results') ||
+        userQuery.includes('campaign');
+
+      const isProductQuery =
+        userQuery.includes('product') ||
+        userQuery.includes('inventory') ||
+        userQuery.includes('stock');
+
+      const isCustomerQuery =
+        userQuery.includes('customer') ||
+        userQuery.includes('client') ||
+        userQuery.includes('user');
+
       let period: 'week' | 'month' | 'quarter' = 'week';
       if (userQuery.includes('month')) period = 'month';
       if (userQuery.includes('quarter')) period = 'quarter';
-      
+
       let content = '';
       let showChart = false;
-      let visualizationType: 'sales' | 'products' | 'customers' | 'general' = 'general';
-      
+      let visualizationType: 'sales' | 'products' | 'customers' | 'general' =
+        'general';
+
       if (isSalesQuery) {
         content = `Here's your sales data analysis for the last ${period}. The charts show revenue trends and detailed performance metrics.`;
         showChart = true;
@@ -86,7 +110,7 @@ function ChatPage() {
         showChart = true; // Always show charts after "I understand you're asking about"
         visualizationType = 'general';
       }
-      
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         content,
@@ -131,12 +155,35 @@ function ChatPage() {
     };
   }, []);
 
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('chatMessages', JSON.stringify(messages));
+    }
+  }, [messages]);
+
+  // Scroll to bottom on page load and when new messages are added
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop =
+          messagesContainerRef.current.scrollHeight;
+      }
+    };
+
+    // Delay to ensure DOM is fully rendered
+    setTimeout(scrollToBottom, 100);
+  }, [messages]);
+
   useEffect(() => {
     // Process voice transcription when coming from voice page
-    if (lastTranscription && processedTranscriptionRef.current !== lastTranscription.text) {
+    if (
+      lastTranscription &&
+      processedTranscriptionRef.current !== lastTranscription.text
+    ) {
       // Mark this transcription as processed
       processedTranscriptionRef.current = lastTranscription.text;
-      
+
       // Add the voice message to chat
       const voiceMessage: Message = {
         id: Date.now().toString(),
@@ -144,15 +191,15 @@ function ChatPage() {
         role: 'user',
         timestamp: lastTranscription.timestamp,
       };
-      
+
       setMessages(prev => [...prev, voiceMessage]);
-      
+
       // Trigger response with the transcription text
       const transcriptionText = lastTranscription.text;
-      
+
       // Clear the transcription
       setLastTranscription(null);
-      
+
       // Trigger response after clearing to avoid re-triggering
       setTimeout(() => {
         handleAIResponse(transcriptionText);
@@ -204,18 +251,21 @@ function ChatPage() {
           </Header>
         </div>
 
-        <div className="flex flex-col flex-1 gap-4 p-4 mt-6 overflow-y-auto bg-stone-100 dark:bg-stone-800 rounded-t-3xl -webkit-overflow-scrolling-touch overscroll-none">
+        <div
+          ref={messagesContainerRef}
+          className="flex flex-col flex-1 gap-4 p-4 mt-6 overflow-y-auto border-none bg-stone-100 dark:bg-stone-800 rounded-t-3xl -webkit-overflow-scrolling-touch overscroll-none"
+        >
           {messages.map(message => (
-            <div key={message.id} className="space-y-2">
+            <div key={message.id} className="space-y-2 border-none">
               <div
                 className={cn(
-                  'flex',
+                  'flex border-none',
                   message.role === 'user' ? 'justify-end' : 'justify-start'
                 )}
               >
                 <div
                   className={cn(
-                    'flex flex-col max-w-[80%] p-3 rounded-2xl',
+                    'flex flex-col max-w-[80%] p-3 rounded-2xl border-none',
                     message.role === 'user'
                       ? 'bg-rose-800 text-white'
                       : 'bg-stone-100 dark:bg-stone-900 text-gray-900 dark:text-gray-100'
@@ -237,13 +287,13 @@ function ChatPage() {
                 </div>
               </div>
               {message.showChart && message.role === 'assistant' && (
-                <div className="mt-4 animate-fade-in animate-duration-500">
-                  <SalesDataVisualization 
-                    showTable={true} 
-                    defaultPeriod={message.chartPeriod || 'week'}
-                    visualizationType={message.visualizationType || 'general'}
-                  />
-                </div>
+                <MessageChart
+                  messageId={message.id}
+                  messageContent={message.content}
+                  messageTimestamp={message.timestamp}
+                  chartPeriod={message.chartPeriod}
+                  visualizationType={message.visualizationType}
+                />
               )}
             </div>
           ))}
