@@ -24,7 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChartContainer } from '@/components/ui/chart';
 import dayjs from 'dayjs';
 
@@ -120,7 +119,7 @@ export function SalesDataVisualization({
   defaultPeriod = 'week',
   visualizationType = 'sales',
 }: SalesDataVisualizationProps) {
-  const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>(
+  const [period] = useState<'week' | 'month' | 'quarter'>(
     defaultPeriod
   );
   const salesData = generateSalesData(period);

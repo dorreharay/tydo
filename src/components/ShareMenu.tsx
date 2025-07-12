@@ -6,7 +6,6 @@ import {
   FileSpreadsheet,
   Download,
   Share,
-  Eye,
 } from 'lucide-react';
 import { cn } from '@lib/utils';
 import { useSocialShare } from '@hooks/useSocialShare';

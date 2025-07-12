@@ -4,8 +4,7 @@ import domtoimage from 'dom-to-image-more';
 export type SocialPlatform = 
   | 'share' // Native Web Share API
   | 'download'
-  | 'excel'
-  | 'preview'; // Debug preview
+  | 'excel';
 
 interface ShareOptions {
   title?: string;
@@ -170,63 +169,6 @@ export const useSocialShare = (): UseSocialShareReturn => {
         return;
       }
 
-      // For preview, just make the element visible
-      if (platform === 'preview') {
-        const element = document.getElementById(elementId);
-        if (!element) {
-          throw new Error(`Element with ID "${elementId}" not found`);
-        }
-        
-        // Toggle visibility
-        const parent = element.parentElement;
-        if (parent) {
-          if (parent.classList.contains('hidden')) {
-            // Show the preview
-            parent.classList.remove('hidden');
-            parent.style.position = 'fixed';
-            parent.style.top = '50%';
-            parent.style.left = '50%';
-            parent.style.transform = 'translate(-50%, -50%)';
-            parent.style.zIndex = '9999';
-            parent.style.maxWidth = '90vw';
-            parent.style.maxHeight = '90vh';
-            parent.style.overflow = 'auto';
-            parent.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-            parent.style.padding = '20px';
-            parent.style.borderRadius = '8px';
-            
-            // Add close button
-            const closeBtn = document.createElement('button');
-            closeBtn.innerHTML = '×';
-            closeBtn.style.position = 'absolute';
-            closeBtn.style.top = '10px';
-            closeBtn.style.right = '10px';
-            closeBtn.style.fontSize = '30px';
-            closeBtn.style.color = 'white';
-            closeBtn.style.background = 'none';
-            closeBtn.style.border = 'none';
-            closeBtn.style.cursor = 'pointer';
-            closeBtn.style.zIndex = '10000';
-            closeBtn.onclick = () => {
-              parent.classList.add('hidden');
-              parent.style.position = '';
-              parent.style.top = '';
-              parent.style.left = '';
-              parent.style.transform = '';
-              parent.style.zIndex = '';
-              parent.style.maxWidth = '';
-              parent.style.maxHeight = '';
-              parent.style.overflow = '';
-              parent.style.backgroundColor = '';
-              parent.style.padding = '';
-              parent.style.borderRadius = '';
-              closeBtn.remove();
-            };
-            parent.appendChild(closeBtn);
-          }
-        }
-        return;
-      }
 
       // For native share, use Web Share API
       if (platform === 'share') {
