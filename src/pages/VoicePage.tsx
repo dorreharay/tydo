@@ -39,7 +39,7 @@ function VoicePage() {
     },
   });
 
-  const { startSession, endSession, isSpeaking, status } = conversation;
+  const { endSession, isSpeaking, status } = conversation;
 
   console.log('conversation', conversation);
 

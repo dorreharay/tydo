@@ -42,14 +42,14 @@ function ChatPage() {
 
       setMessages(prev => [
         ...prev,
-        { message: 'Session Ended', source: 'ai', id: 0 },
+        { message: 'Session Ended', source: 'ai', id: '0' },
       ]);
     },
     onMessage: message => {
       console.log('MESSAGE', message);
       const messageWithId = {
         ...message,
-        id: message.id || Date.now().toString(),
+        id: (message as any).id || Date.now().toString(),
       };
       setMessages(prev => [...prev, messageWithId]);
 
@@ -61,12 +61,11 @@ function ChatPage() {
 
   console.log('conversation', conversation);
 
-  const { startSession, endSession, sendUserMessage, isSpeaking, status } =
+  const { startSession, sendUserMessage, isSpeaking, status } =
     conversation;
 
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showAISpeaking, setShowAISpeaking] = useState(false);
   const [showUserListening, setShowUserListening] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -126,19 +125,6 @@ function ChatPage() {
   }, [messages]);
 
   useEffect(() => {}, [handleAIResponse]);
-
-  // Handle delayed appearance of AI speaking indicator
-  useEffect(() => {
-    let timeout: NodeJS.Timeout;
-    if (status === 'connected' && isSpeaking) {
-      timeout = setTimeout(() => {
-        setShowAISpeaking(true);
-      }, 2000); // 2 second delay
-    } else {
-      setShowAISpeaking(false);
-    }
-    return () => clearTimeout(timeout);
-  }, [status, isSpeaking]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
