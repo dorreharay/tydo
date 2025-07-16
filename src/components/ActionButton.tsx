@@ -5,9 +5,10 @@ type Props = {
   className?: string | object;
   onClick?: () => void;
   children: ReactNode;
+  disabled?: boolean;
 };
 
-function ActionButton({ className, onClick, children }: Props) {
+function ActionButton({ className, onClick, children, disabled }: Props) {
   return (
     <button
       className={cn(
@@ -15,6 +16,7 @@ function ActionButton({ className, onClick, children }: Props) {
         className
       )}
       onClick={onClick}
+      disabled={disabled}
     >
       {children}
     </button>

@@ -1,136 +1,89 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageSquareDashed, Send, AudioLines } from 'lucide-react';
+import {
+  MessageSquareDashed,
+  Send,
+  AudioLines,
+  LoaderCircle,
+} from 'lucide-react';
 import { cn } from '@lib/utils';
 import Header from '@/components/Header';
-import dayjs from 'dayjs';
 import { useVoice } from '@contexts/VoiceContext';
-import { useNavigate } from 'react-router-dom';
-import { MessageChart } from '@components/MessageChart';
 import type { ChartPeriod } from '@hooks/useChartData';
+import { useConversation } from '@elevenlabs/react';
+import { useLocation } from 'react-router-dom';
 
 interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  timestamp: Date;
+  id?: string;
+  message: string;
+  source: 'user' | 'ai';
   showChart?: boolean;
   chartPeriod?: ChartPeriod;
   visualizationType?: 'sales' | 'products' | 'customers' | 'general';
 }
 
 function ChatPage() {
-  const navigate = useNavigate();
-  const { lastTranscription, setLastTranscription, setShouldStartRecording } =
-    useVoice();
-  const [messages, setMessages] = useState<Message[]>(() => {
-    // Try to load messages from localStorage
-    const savedMessages = localStorage.getItem('chatMessages');
-    if (savedMessages) {
-      try {
-        const parsed = JSON.parse(savedMessages);
-        // Convert timestamp strings back to Date objects
-        return parsed.map((msg: any) => ({
-          ...msg,
-          timestamp: new Date(msg.timestamp),
-        }));
-      } catch (error) {
-        console.error('Error parsing saved messages:', error);
+  const { setShouldStartRecording } = useVoice();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [, setInitialLoading] = useState(true);
+
+  const { search } = useLocation();
+
+  const isVoicePreselected = search.includes('voice=true');
+
+  const conversation = useConversation({
+    onConnect: state => {
+      console.log('connect state', state);
+    },
+    onAudio: state => {
+      console.log('audio state', state);
+    },
+    onDisconnect: () => {
+      console.log('DISCONNECTED');
+
+      setMessages(prev => [
+        ...prev,
+        { message: 'Session Ended', source: 'ai', id: 0 },
+      ]);
+    },
+    onMessage: message => {
+      console.log('MESSAGE', message);
+      const messageWithId = {
+        ...message,
+        id: message.id || Date.now().toString(),
+      };
+      setMessages(prev => [...prev, messageWithId]);
+
+      if (message.source === 'ai') {
+        setShowUserListening(true);
       }
-    }
-
-    // If we have a voice transcription, don't show welcome message
-    if (lastTranscription) {
-      return [];
-    }
-
-    // Default welcome message
-    return [
-      {
-        id: '1',
-        content: 'Welcome to Tydo Chat! How can I help you today?',
-        role: 'assistant',
-        timestamp: new Date(),
-      },
-    ];
+    },
   });
+
+  console.log('conversation', conversation);
+
+  const { startSession, endSession, sendUserMessage, isSpeaking, status } =
+    conversation;
+
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const processedTranscriptionRef = useRef<string | null>(null);
+  const [showAISpeaking, setShowAISpeaking] = useState(false);
+  const [showUserListening, setShowUserListening] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  const handleAIResponse = useCallback((query: string) => {
-    const userQuery = query.toLowerCase();
+  const handleAIResponse = useCallback(() => {
     setIsLoading(true);
 
-    // Simulate AI response
     setTimeout(() => {
-      const isSalesQuery =
-        userQuery.includes('sales') ||
-        userQuery.includes('revenue') ||
-        userQuery.includes('business') ||
-        userQuery.includes('performance') ||
-        userQuery.includes('results') ||
-        userQuery.includes('campaign');
-
-      const isProductQuery =
-        userQuery.includes('product') ||
-        userQuery.includes('inventory') ||
-        userQuery.includes('stock');
-
-      const isCustomerQuery =
-        userQuery.includes('customer') ||
-        userQuery.includes('client') ||
-        userQuery.includes('user');
-
-      let period: 'week' | 'month' | 'quarter' = 'week';
-      if (userQuery.includes('month')) period = 'month';
-      if (userQuery.includes('quarter')) period = 'quarter';
-
-      let content = '';
-      let showChart = false;
-      let visualizationType: 'sales' | 'products' | 'customers' | 'general' =
-        'general';
-
-      if (isSalesQuery) {
-        content = `Here's your sales data analysis for the last ${period}. The charts show revenue trends and detailed performance metrics.`;
-        showChart = true;
-        visualizationType = 'sales';
-      } else if (isProductQuery) {
-        content = `I understand you're asking about products. Here's the product performance data for the last ${period}.`;
-        showChart = true;
-        visualizationType = 'products';
-      } else if (isCustomerQuery) {
-        content = `I understand you're asking about customers. Here's the customer analytics for the last ${period}.`;
-        showChart = true;
-        visualizationType = 'customers';
-      } else {
-        content = `I understand you're asking about "${userQuery}". Here's what I found for you.`;
-        showChart = true; // Always show charts after "I understand you're asking about"
-        visualizationType = 'general';
-      }
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content,
-        role: 'assistant',
-        timestamp: new Date(),
-        showChart,
-        chartPeriod: period,
-        visualizationType,
-      };
-      setMessages(prev => [...prev, assistantMessage]);
       setIsLoading(false);
     }, 1000);
   }, []);
 
   useEffect(() => {
-    // Prevent default scrolling behavior on input focus
     const handleFocus = (e: FocusEvent) => {
       if (e.target === inputRef.current) {
         e.preventDefault();
-        // Keep the view fixed
         window.scrollTo(0, 0);
         document.body.scrollTop = 0;
         document.documentElement.scrollTop = 0;
@@ -155,14 +108,12 @@ function ChatPage() {
     };
   }, []);
 
-  // Save messages to localStorage whenever they change
   useEffect(() => {
     if (messages.length > 0) {
       localStorage.setItem('chatMessages', JSON.stringify(messages));
     }
   }, [messages]);
 
-  // Scroll to bottom on page load and when new messages are added
   useEffect(() => {
     const scrollToBottom = () => {
       if (messagesContainerRef.current) {
@@ -171,55 +122,40 @@ function ChatPage() {
       }
     };
 
-    // Delay to ensure DOM is fully rendered
     setTimeout(scrollToBottom, 100);
   }, [messages]);
 
+  useEffect(() => {}, [handleAIResponse]);
+
+  // Handle delayed appearance of AI speaking indicator
   useEffect(() => {
-    // Process voice transcription when coming from voice page
-    if (
-      lastTranscription &&
-      processedTranscriptionRef.current !== lastTranscription.text
-    ) {
-      // Mark this transcription as processed
-      processedTranscriptionRef.current = lastTranscription.text;
-
-      // Add the voice message to chat
-      const voiceMessage: Message = {
-        id: Date.now().toString(),
-        content: lastTranscription.text,
-        role: 'user',
-        timestamp: lastTranscription.timestamp,
-      };
-
-      setMessages(prev => [...prev, voiceMessage]);
-
-      // Trigger response with the transcription text
-      const transcriptionText = lastTranscription.text;
-
-      // Clear the transcription
-      setLastTranscription(null);
-
-      // Trigger response after clearing to avoid re-triggering
-      setTimeout(() => {
-        handleAIResponse(transcriptionText);
-      }, 500);
+    let timeout: NodeJS.Timeout;
+    if (status === 'connected' && isSpeaking) {
+      timeout = setTimeout(() => {
+        setShowAISpeaking(true);
+      }, 2000); // 2 second delay
+    } else {
+      setShowAISpeaking(false);
     }
-  }, [lastTranscription, setLastTranscription, handleAIResponse]);
+    return () => clearTimeout(timeout);
+  }, [status, isSpeaking]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputValue,
-      role: 'user',
-      timestamp: new Date(),
+      message: inputValue,
+      source: 'user',
     };
+
+    setShowUserListening(false);
+
+    sendUserMessage(inputValue);
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
-    handleAIResponse(inputValue);
+    handleAIResponse();
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -229,12 +165,44 @@ function ChatPage() {
     }
   };
 
-  const handleVoiceClick = () => {
-    // Set flag to start recording when voice page loads
-    setShouldStartRecording(true);
-    // Navigate to voice page
-    navigate('/');
-  };
+  const handleVoiceClick = useCallback(async () => {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      await startSession({
+        agentId: 'agent_01k09khggefxpaz11w4veq5q0c',
+        connectionType: 'webrtc',
+        // clientTools: {
+        //   logMessage: async ({ message }) => {
+        //     alert(message);
+        //   },
+        // },
+      });
+
+      setShouldStartRecording(true);
+    } catch (error) {
+      console.log('error', error);
+    } finally {
+      setInitialLoading(false);
+    }
+  }, [setShouldStartRecording, startSession]);
+
+  useEffect(() => {
+    if (isVoicePreselected) {
+      handleVoiceClick();
+    } else {
+      startSession({
+        agentId: 'agent_01k09khggefxpaz11w4veq5q0c',
+        connectionType: 'webrtc',
+        // clientTools: {
+        //   logMessage: async ({ message }) => {
+        //     alert(message);
+        //   },
+        // },
+      });
+      setInitialLoading(false);
+    }
+  }, [handleVoiceClick, isVoicePreselected]);
 
   return (
     <div
@@ -246,7 +214,13 @@ function ChatPage() {
           <Header canGoBack={true}>
             <>
               <MessageSquareDashed className="w-5 h-5" />
-              Chat with Tydo
+              {status === 'connecting'
+                ? 'Connecting...'
+                : status === 'connected'
+                  ? isSpeaking
+                    ? 'Tydo is speaking...'
+                    : 'Tydo is ready'
+                  : 'Chat with Tydo'}
             </>
           </Header>
         </div>
@@ -255,66 +229,115 @@ function ChatPage() {
           ref={messagesContainerRef}
           className="flex flex-col flex-1 gap-4 p-4 mt-6 overflow-y-auto border-none bg-stone-100 dark:bg-stone-800 rounded-t-3xl -webkit-overflow-scrolling-touch overscroll-none"
         >
+          {!messages?.length &&
+          status !== 'connecting' &&
+          status !== 'connected' &&
+          status !== 'disconnected' ? (
+            <div className="flex flex-col gap-8 my-auto">
+              <div className="font-euclid text-stone-400">
+                To start communication please send a message or start audio
+                session
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handleVoiceClick}
+                  className="flex items-center justify-center gap-2 p-3 transition-colors bg-white rounded-full dark:bg-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 font-euclid-m text-stone-300"
+                >
+                  <AudioLines className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  Start Voice Chat
+                </button>
+                <button
+                  onClick={() => inputRef.current?.focus()}
+                  className="flex items-center justify-center gap-2 p-3 transition-colors bg-white rounded-full dark:bg-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 font-euclid-m text-stone-300"
+                >
+                  <Send className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  Send Message
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {status === 'connecting' && (
+            <div className="flex flex-col items-center gap-4 my-auto">
+              <LoaderCircle className="relative w-12 h-12 text-stone-400 animate-spin" />
+              <p className="text-md text-stone-600 dark:text-stone-400 font-euclid">
+                Connecting to Tydo...
+              </p>
+            </div>
+          )}
+
           {messages.map(message => (
             <div key={message.id} className="space-y-2 border-none">
               <div
                 className={cn(
                   'flex border-none',
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
+                  message.source === 'user' ? 'justify-end' : 'justify-start'
                 )}
               >
                 <div
                   className={cn(
                     'flex flex-col max-w-[80%] p-3 rounded-2xl border-none',
-                    message.role === 'user'
+                    message.source === 'user'
                       ? 'bg-rose-800 text-white'
                       : 'bg-stone-100 dark:bg-stone-900 text-gray-900 dark:text-gray-100'
                   )}
                 >
                   <p className="text-left text-md font-euclid">
-                    {message.content}
-                  </p>
-                  <p
-                    className={cn(
-                      'text-xs text-right',
-                      message.role === 'user'
-                        ? 'text-rose-100'
-                        : 'text-gray-500 dark:text-gray-400'
-                    )}
-                  >
-                    {dayjs(message.timestamp).format('HH:mm')}
+                    {message.message}
                   </p>
                 </div>
               </div>
-              {message.showChart && message.role === 'assistant' && (
+              {/* {message.showChart && message.source === 'ai' && (
                 <MessageChart
                   messageId={message.id}
-                  messageContent={message.content}
-                  messageTimestamp={message.timestamp}
+                  messageContent={message.message}
                   chartPeriod={message.chartPeriod}
                   visualizationType={message.visualizationType}
                 />
-              )}
+              )} */}
             </div>
           ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="p-3 bg-stone-100 dark:bg-stone-800 rounded-2xl">
-                <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:0.4s]" />
+
+          {showUserListening && (
+            <div className="flex justify-end">
+              <div className="p-5 rounded-full bg-rose-800">
+                <div className="flex items-center space-x-2">
+                  <div className="flex space-x-1">
+                    <div className="w-1 h-1 bg-white rounded-full animate-bounce" />
+                    <div className="w-1 h-1 bg-white rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <div className="w-1 h-1 bg-white rounded-full animate-bounce [animation-delay:0.4s]" />
+                  </div>
                 </div>
               </div>
             </div>
           )}
+
+          {status === 'connected' &&
+            !showUserListening &&
+            messages.length > 0 && (
+              <div className="flex justify-start">
+                <div className="p-5 rounded-full bg-stone-100 dark:bg-stone-900">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex space-x-1">
+                      <div className="w-1 h-1 rounded-full bg-stone-600 dark:bg-stone-400 animate-bounce" />
+                      <div className="w-1 h-1 bg-stone-600 dark:bg-stone-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                      <div className="w-1 h-1 bg-stone-600 dark:bg-stone-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
         </div>
 
         <div className="w-full p-4 border-t dark:border-stone-800 dark:bg-stone-900 bg-stone-200 border-stone-100">
           <div className="flex gap-2">
             <button
               onClick={handleVoiceClick}
-              className="p-3 transition-colors bg-white rounded-full dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700"
+              className={cn(
+                'p-3 transition-colors bg-white rounded-full dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700',
+                status === 'connected' ? 'bg-rose-800 hover:bg-rose-700' : ''
+              )}
+              disabled
             >
               <AudioLines className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </button>
@@ -329,10 +352,12 @@ function ChatPage() {
             />
             <button
               onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isLoading}
+              disabled={
+                !inputValue.trim() || isLoading || status !== 'connected'
+              }
               className={cn(
                 'p-3 rounded-full transition-colors',
-                inputValue.trim() && !isLoading
+                inputValue.trim() && !isLoading && status === 'connected'
                   ? 'bg-rose-800 text-white hover:bg-rose-700'
                   : 'bg-stone-200 dark:bg-stone-700 text-gray-400 cursor-not-allowed'
               )}
