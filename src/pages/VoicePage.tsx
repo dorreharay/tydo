@@ -19,7 +19,7 @@ function VoicePage() {
 
   return (
     <div className="overflow-hidden text-gray-900 transition-all duration-100 h-screen-safe dark:bg-stone-900 dark:text-gray-100">
-      <div className="flex flex-col h-full p-4 py-8 pb-24 mx-auto">
+      <div className="flex flex-col h-full p-4 py-4 pb-24 mx-auto">
         <Header isLive={status === 'connected' || status === 'connecting'}>
           <>
             <SquircleDashed className="w-6 h-6" />
