@@ -17,7 +17,7 @@ interface ShareMenuProps {
   text?: string;
   hashtags?: string[];
   className?: string;
-  chartData?: any[];
+  chartData?: Record<string, unknown>[];
 }
 
 const platformColors: Record<SocialPlatform, string> = {

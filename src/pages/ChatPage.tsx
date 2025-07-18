@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageSquareDashed, LoaderCircle, RefreshCcw } from 'lucide-react';
 import { cn } from '@lib/utils';
 import Header from '@/components/Header';
@@ -70,7 +71,7 @@ function ChatPage() {
     setTimeout(scrollToBottom, 100);
   }, [messages]);
 
-  const initiate = async () => {
+  const initiate = useCallback(async () => {
     try {
       const conversation = await Conversation.startSession({
         agentId: 'agent_01k09khggefxpaz11w4veq5q0c',
@@ -88,14 +89,14 @@ function ChatPage() {
               setShowUserListening(false);
             }
 
-            if (!prev?.length) {
-              conversationRef?.current.connection.sendMessage({
+            if (!prev?.length && text) {
+              (conversationRef?.current as any)?.connection?.sendMessage({
                 type: 'user_message',
                 text,
               });
               initialMessageWithId = {
                 message: text,
-                source: 'user',
+                source: 'user' as const,
                 id: Date.now().toString() + 2,
               };
               setShowUserListening(false);
@@ -117,35 +118,35 @@ function ChatPage() {
 
           setMessages(prev => [
             ...prev,
-            { message: 'Session Ended', source: 'ai', id: '0' },
+            { message: 'Session Ended', source: 'ai' as const, id: '0' },
           ]);
           setShowUserListening(false);
         },
       });
 
-      conversation.setVolume({ volume: 0 });
+      conversation.setVolume({ volume: text ? 0 : 1 });
 
       conversationRef.current = conversation;
     } catch (error) {
       console.log('initiate - error', error);
     }
-  };
+  }, [text]);
 
   useEffect(() => {
     initiate();
 
     return () => {
-      conversationRef?.current?.handleEndSession();
+      (conversationRef?.current as any)?.handleEndSession?.();
     };
-  }, []);
+  }, [initiate]);
+
+  const { status, mode } = conversationRef?.current || {};
 
   useEffect(() => {
     if (status === 'disconnected') {
       setShowUserListening(false);
     }
-  }, []);
-
-  const { status, mode } = conversationRef?.current || {};
+  }, [status]);
 
   return (
     <div

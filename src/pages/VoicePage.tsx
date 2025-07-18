@@ -49,7 +49,7 @@ function VoicePage() {
 
           <ActionButton
             className="active:scale-[0.95] active:bg-stone-700 transition-all duration-20"
-            onClick={() => handleContinueInChat()}
+            onClick={() => handleContinueInChat('')}
           >
             <AudioLines className="w-8 h-8" />
           </ActionButton>

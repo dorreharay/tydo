@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 export interface CSVExportOptions {
   fileName?: string;
   headers?: string[];
-  data: Array<Record<string, any>>;
+  data: Array<Record<string, unknown>>;
 }
 
 export interface UseExportCSVReturn {

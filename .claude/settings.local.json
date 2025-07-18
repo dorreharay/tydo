@@ -15,7 +15,12 @@
       "Bash(grep:*)",
       "Bash(pnpm tsc:*)",
       "Bash(pnpm lint:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(ls:*)",
+      "Bash(npm run lint)",
+      "Bash(tsc:*)",
+      "Bash(rg:*)",
+      "Bash(true)"
     ],
     "deny": []
   }

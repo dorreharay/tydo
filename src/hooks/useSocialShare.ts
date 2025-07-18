@@ -10,7 +10,7 @@ interface ShareOptions {
   title?: string;
   text?: string;
   hashtags?: string[];
-  chartData?: any[]; // For Excel export
+  chartData?: Record<string, unknown>[]; // For Excel export
 }
 
 
@@ -121,7 +121,7 @@ export const useSocialShare = (): UseSocialShareReturn => {
           const maxWidths: { [key: string]: number } = {};
           
           // Calculate max width for each column
-          options.chartData.forEach((row: any) => {
+          options.chartData.forEach((row: Record<string, unknown>) => {
             Object.keys(row).forEach(key => {
               const value = String(row[key] || '');
               maxWidths[key] = Math.max(maxWidths[key] || 10, value.length + 2);
