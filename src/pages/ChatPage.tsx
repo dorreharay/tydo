@@ -71,10 +71,12 @@ function ChatPage() {
     setTimeout(scrollToBottom, 100);
   }, [messages]);
 
+  console.log('[conversationRef?.current]', conversationRef?.current);
+
   const initiate = useCallback(async () => {
     try {
       const conversation = await Conversation.startSession({
-        agentId: 'agent_01k09khggefxpaz11w4veq5q0c',
+        agentId: import.meta.env.VITE_AGENT_ID,
         onMessage: message => {
           const messageWithId = {
             ...message,
@@ -90,16 +92,18 @@ function ChatPage() {
             }
 
             if (!prev?.length && text) {
-              (conversationRef?.current as any)?.connection?.sendMessage({
-                type: 'user_message',
-                text,
-              });
+              setTimeout(() => {
+                (conversationRef?.current as any)?.connection?.sendMessage({
+                  type: 'user_message',
+                  text,
+                });
+              }, 3500);
+              setShowUserListening(false);
               initialMessageWithId = {
                 message: text,
                 source: 'user' as const,
                 id: Date.now().toString() + 2,
               };
-              setShowUserListening(false);
             }
 
             conversationRef?.current.setVolume({ volume: 0.5 });
@@ -122,16 +126,16 @@ function ChatPage() {
           ]);
           setShowUserListening(false);
         },
-        clientTools: {
-          logMessage: ({ message }) => {
-            alert(message);
-          },
-        },
+        // clientTools: {
+        //   logMessage: ({ message }) => {
+        //     alert(message);
+        //   },
+        // },
       });
 
-      if (text) {
-        conversation.setVolume({ volume: 0 });
-      }
+      // if (text) {
+      //   conversation.setVolume({ volume: 0 });
+      // }
 
       conversationRef.current = conversation;
     } catch (error) {
