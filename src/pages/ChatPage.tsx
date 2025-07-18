@@ -122,6 +122,11 @@ function ChatPage() {
           ]);
           setShowUserListening(false);
         },
+        clientTools: {
+          logMessage: ({ message }) => {
+            alert(message);
+          },
+        },
       });
 
       conversation.setVolume({ volume: text ? 0 : 1 });
@@ -153,7 +158,7 @@ function ChatPage() {
       ref={containerRef}
       className="overflow-hidden text-gray-900 transition-all duration-100 h-screen-safe dark:bg-stone-900 dark:text-gray-100"
     >
-      <div className="flex flex-col h-full pt-8 mx-auto">
+      <div className="flex flex-col h-full pt-4 mx-auto">
         <div className="px-4">
           <Header canGoBack={true}>
             <>
