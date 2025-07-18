@@ -102,7 +102,7 @@ function ChatPage() {
               setShowUserListening(false);
             }
 
-            conversationRef?.current.setVolume({ volume: 1 });
+            conversationRef?.current.setVolume({ volume: 0.5 });
 
             let result = [...prev, messageWithId];
 
@@ -129,7 +129,9 @@ function ChatPage() {
         },
       });
 
-      conversation.setVolume({ volume: text ? 0 : 1 });
+      if (text) {
+        conversation.setVolume({ volume: 0 });
+      }
 
       conversationRef.current = conversation;
     } catch (error) {
