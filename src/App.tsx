@@ -9,7 +9,7 @@ function App() {
       <VoiceProvider>
         <Routes>
           <Route path="/" element={<VoicePage />} />
-          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:text?" element={<ChatPage />} />
         </Routes>
       </VoiceProvider>
     </Router>

@@ -1,8 +1,8 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
-import { ThemeProvider } from './contexts/ThemeContext'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App.tsx';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // Set custom viewport height property
 const setViewportHeight = () => {
@@ -22,8 +22,10 @@ if ('visualViewport' in window) {
   window.visualViewport?.addEventListener('resize', () => {
     const hasKeyboard = window.visualViewport!.height < window.innerHeight;
     if (hasKeyboard) {
-      document.documentElement.style.setProperty('--keyboard-height', 
-        `${window.innerHeight - window.visualViewport!.height}px`);
+      document.documentElement.style.setProperty(
+        '--keyboard-height',
+        `${window.innerHeight - window.visualViewport!.height}px`
+      );
     } else {
       document.documentElement.style.setProperty('--keyboard-height', '0px');
     }
@@ -31,9 +33,7 @@ if ('visualViewport' in window) {
 }
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ThemeProvider>
-      <App />
-    </ThemeProvider>
-  </StrictMode>,
-)
+  <ThemeProvider>
+    <App />
+  </ThemeProvider>
+);
