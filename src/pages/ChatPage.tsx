@@ -71,8 +71,6 @@ function ChatPage() {
     setTimeout(scrollToBottom, 100);
   }, [messages]);
 
-  console.log('[conversationRef?.current]', conversationRef?.current);
-
   const initiate = useCallback(async () => {
     try {
       const conversation = await Conversation.startSession({
@@ -126,11 +124,12 @@ function ChatPage() {
           ]);
           setShowUserListening(false);
         },
-        // clientTools: {
-        //   logMessage: ({ message }) => {
-        //     alert(message);
-        //   },
-        // },
+        clientTools: {
+          getTableData: event => {
+            alert('CLIENT TOOL');
+            console.log('[getTableData]', event);
+          },
+        },
       });
 
       // if (text) {

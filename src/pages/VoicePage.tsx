@@ -5,7 +5,6 @@ import Header from '@components/Header';
 import ActionButton from '@components/ActionButton';
 
 const suggestions = [
-  { text: 'Log message saying "Hello World!"' },
   { text: "How's my business doing?" },
   { text: 'Show me top products' },
   { text: 'What were my sales yesterday?' },
