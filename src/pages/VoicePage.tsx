@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@lib/utils';
 import Header from '@components/Header';
 import ActionButton from '@components/ActionButton';
+import { useNavigation } from '@/contexts/NavigationContext';
 
 const suggestions = [
   { text: "How's my business doing?" },
@@ -12,14 +13,19 @@ const suggestions = [
 
 function VoicePage() {
   const navigate = useNavigate();
+  const { setInitialMessage } = useNavigation();
+  
   const handleContinueInChat = (text?: string) => {
-    navigate(`/chat/${text}`);
+    if (text) {
+      setInitialMessage(text);
+    }
+    navigate('/chat');
   };
 
   return (
     <div className="overflow-hidden text-gray-900 transition-all duration-100 h-screen-safe dark:bg-stone-900 dark:text-gray-100">
       <div className="flex flex-col h-full p-4 py-4 pb-24 mx-auto">
-        <Header isLive={status === 'connected' || status === 'connecting'}>
+        <Header>
           <>
             <SquircleDashed className="w-6 h-6" />
             Tydo is ready

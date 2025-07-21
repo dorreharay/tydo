@@ -112,17 +112,37 @@ interface SalesDataVisualizationProps {
   showTable?: boolean;
   defaultPeriod?: 'week' | 'month' | 'quarter';
   visualizationType?: 'sales' | 'products' | 'customers' | 'general';
+  customData?: Array<{
+    name: string;
+    value: number;
+    date: string;
+  }>;
 }
 
 export function SalesDataVisualization({
   showTable = true,
   defaultPeriod = 'week',
   visualizationType = 'sales',
+  customData,
 }: SalesDataVisualizationProps) {
   const [period] = useState<'week' | 'month' | 'quarter'>(
     defaultPeriod
   );
-  const salesData = generateSalesData(period);
+  
+  // Transform custom data to match SalesData structure if provided
+  const salesData = customData 
+    ? customData.map(item => ({
+        date: item.name,
+        revenue: item.value,
+        units: Math.round(item.value / 100),
+        customers: Math.round(item.value / 150),
+        products: Math.round(15 + Math.random() * 10),
+        returns: Math.round(2 + Math.random() * 5),
+        avgOrderValue: Math.round(item.value / (item.value / 100)),
+        newCustomers: Math.round((item.value / 150) * 0.3),
+        returningCustomers: Math.round((item.value / 150) * 0.7),
+      }))
+    : generateSalesData(period);
 
   const totalRevenue = salesData.reduce((sum, day) => sum + day.revenue, 0);
   const totalUnits = salesData.reduce((sum, day) => sum + day.units, 0);

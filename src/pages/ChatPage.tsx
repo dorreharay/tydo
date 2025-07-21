@@ -1,11 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageSquareDashed, LoaderCircle, RefreshCcw } from 'lucide-react';
+import {
+  MessageSquareDashed,
+  LoaderCircle,
+  RefreshCcw,
+  Send,
+} from 'lucide-react';
 import { cn } from '@lib/utils';
 import Header from '@/components/Header';
 import type { ChartPeriod } from '@hooks/useChartData';
 import { Conversation } from '@elevenlabs/client';
-import { useParams } from 'react-router-dom';
+import { MessageChart } from '@/components/MessageChart';
+import { useNavigation } from '@/contexts/NavigationContext';
 
 interface Message {
   id?: string;
@@ -14,14 +20,20 @@ interface Message {
   showChart?: boolean;
   chartPeriod?: ChartPeriod;
   visualizationType?: 'sales' | 'products' | 'customers' | 'general';
+  chartData?: Array<{
+    name: string;
+    value: number;
+    date: string;
+  }>;
 }
 
 function ChatPage() {
-  const { text } = useParams();
+  const { initialMessage, setInitialMessage } = useNavigation();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState('');
 
   const [showUserListening, setShowUserListening] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const conversationRef = useRef<any>(null);
@@ -89,16 +101,20 @@ function ChatPage() {
               setShowUserListening(false);
             }
 
-            if (!prev?.length && text) {
+            console.log('prev', prev, initialMessage);
+
+            if (!prev?.length && initialMessage) {
+              console.log('initialMessage', initialMessage);
               setTimeout(() => {
                 (conversationRef?.current as any)?.connection?.sendMessage({
                   type: 'user_message',
-                  text,
+                  text: initialMessage,
                 });
-              }, 3500);
+                setInitialMessage(null);
+              }, 300);
               setShowUserListening(false);
               initialMessageWithId = {
-                message: text,
+                message: initialMessage,
                 source: 'user' as const,
                 id: Date.now().toString() + 2,
               };
@@ -116,8 +132,6 @@ function ChatPage() {
           });
         },
         onDisconnect: () => {
-          console.log('DISCONNECTED');
-
           setMessages(prev => [
             ...prev,
             { message: 'Session Ended', source: 'ai' as const, id: '0' },
@@ -125,9 +139,21 @@ function ChatPage() {
           setShowUserListening(false);
         },
         clientTools: {
-          getTableData: event => {
-            alert('CLIENT TOOL');
-            console.log('[getTableData]', event);
+          generate_table: ({ data }) => {
+            setTimeout(() => {
+              setMessages(prev => [
+                ...prev,
+                {
+                  id: Date.now().toString(),
+                  message: '',
+                  source: 'ai',
+                  showChart: true,
+                  chartData: data,
+                  visualizationType: 'general',
+                  chartPeriod: 'month',
+                },
+              ]);
+            }, 3000);
           },
         },
       });
@@ -140,7 +166,7 @@ function ChatPage() {
     } catch (error) {
       console.log('initiate - error', error);
     }
-  }, [text]);
+  }, [initialMessage, setInitialMessage]);
 
   useEffect(() => {
     initiate();
@@ -148,7 +174,7 @@ function ChatPage() {
     return () => {
       (conversationRef?.current as any)?.handleEndSession?.();
     };
-  }, [initiate]);
+  }, []);
 
   const { status, mode } = conversationRef?.current || {};
 
@@ -157,6 +183,33 @@ function ChatPage() {
       setShowUserListening(false);
     }
   }, [status]);
+
+  const handleSendMessage = () => {
+    if (!inputValue.trim() || !conversationRef.current) return;
+
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      message: inputValue.trim(),
+      source: 'user',
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    setInputValue('');
+
+    (conversationRef.current as any)?.connection?.sendMessage({
+      type: 'user_message',
+      text: inputValue.trim(),
+    });
+
+    setShowUserListening(false);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   return (
     <div
@@ -221,33 +274,36 @@ function ChatPage() {
 
           {messages.map(message => (
             <div key={message.id} className="space-y-2 border-none">
-              <div
-                className={cn(
-                  'flex border-none',
-                  message.source === 'user' ? 'justify-end' : 'justify-start'
-                )}
-              >
+              {message?.message && (
                 <div
                   className={cn(
-                    'flex flex-col max-w-[80%] p-3 rounded-2xl border-none',
-                    message.source === 'user'
-                      ? 'bg-rose-800 text-white'
-                      : 'bg-stone-200 dark:bg-stone-900 text-gray-900 dark:text-gray-100'
+                    'flex border-none',
+                    message.source === 'user' ? 'justify-end' : 'justify-start'
                   )}
                 >
-                  <p className="text-left text-md font-euclid">
-                    {message.message}
-                  </p>
+                  <div
+                    className={cn(
+                      'flex flex-col max-w-[80%] p-3 rounded-2xl border-none',
+                      message.source === 'user'
+                        ? 'bg-rose-800 text-white'
+                        : 'bg-stone-200 dark:bg-stone-900 text-gray-900 dark:text-gray-100'
+                    )}
+                  >
+                    <p className="text-left text-md font-euclid">
+                      {message.message}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              {/* {message.showChart && message.source === 'ai' && (
+              )}
+              {message.showChart && (
                 <MessageChart
                   messageId={message.id}
                   messageContent={message.message}
                   chartPeriod={message.chartPeriod}
                   visualizationType={message.visualizationType}
+                  chartData={message.chartData}
                 />
-              )} */}
+              )}
             </div>
           ))}
 
@@ -291,7 +347,26 @@ function ChatPage() {
             )}
         </div>
 
-        {/* <div className="w-full h-24 p-4 border-t dark:border-stone-800 dark:bg-stone-900 bg-stone-200 border-stone-100"></div> */}
+        <div className="w-full p-4 bg-white border-t dark:border-stone-700 dark:bg-stone-900 border-stone-200">
+          <div className="flex items-end max-w-4xl gap-2 mx-auto">
+            <textarea
+              ref={inputRef}
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder="Type a message..."
+              className="flex-1 px-4 py-3 text-base bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-full focus:outline-none resize-none min-h-[48px] max-h-[120px] font-euclid overflow-y-auto"
+              rows={1}
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || status !== 'connected'}
+              className="p-3 text-white transition-all duration-200 rounded-full bg-rose-800 hover:bg-rose-700 active:bg-rose-900 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

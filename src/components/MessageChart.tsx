@@ -6,21 +6,27 @@ import { useChartData } from '@hooks/useChartData';
 import type { ChartPeriod } from '@hooks/useChartData';
 
 interface MessageChartProps {
-  messageId: string;
+  messageId?: string;
   messageContent: string;
-  messageTimestamp: Date;
+  messageTimestamp?: Date;
   chartPeriod?: ChartPeriod;
   visualizationType?: 'sales' | 'products' | 'customers' | 'general';
+  chartData?: Array<{
+    name: string;
+    value: number;
+    date: string;
+  }>;
 }
 
 export const MessageChart: React.FC<MessageChartProps> = ({
-  messageId,
+  messageId = Date.now().toString(),
   messageContent,
-  messageTimestamp,
+  messageTimestamp = new Date(),
   chartPeriod = 'week',
   visualizationType = 'general',
+  chartData: customChartData,
 }) => {
-  const chartData = useChartData(chartPeriod);
+  const mockChartData = useChartData(chartPeriod);
 
   const getShareText = () => {
     const periodText =
@@ -42,17 +48,23 @@ export const MessageChart: React.FC<MessageChartProps> = ({
   };
 
   // Format chart data for Excel export
-  const excelData = chartData.map(item => ({
-    Date: item.date,
-    Revenue: item.revenue,
-    'Units Sold': item.units,
-    Customers: item.customers,
-    'Average Order Value': item.avgOrderValue || 0,
-    'New Customers': item.newCustomers || 0,
-    'Returning Customers': item.returningCustomers || 0,
-    Products: item.products || 0,
-    Returns: item.returns || 0,
-  }));
+  const excelData = customChartData 
+    ? customChartData.map(item => ({
+        Date: item.date,
+        Name: item.name,
+        Value: item.value,
+      }))
+    : mockChartData.map(item => ({
+        Date: item.date,
+        Revenue: item.revenue,
+        'Units Sold': item.units,
+        Customers: item.customers,
+        'Average Order Value': item.avgOrderValue || 0,
+        'New Customers': item.newCustomers || 0,
+        'Returning Customers': item.returningCustomers || 0,
+        Products: item.products || 0,
+        Returns: item.returns || 0,
+      }));
 
   return (
     <div className="border-none">
@@ -67,6 +79,7 @@ export const MessageChart: React.FC<MessageChartProps> = ({
             showTable={false}
             defaultPeriod={chartPeriod}
             visualizationType={visualizationType}
+            customData={customChartData}
           />
         </ShareableMessage>
       </div>
@@ -77,6 +90,7 @@ export const MessageChart: React.FC<MessageChartProps> = ({
           showTable={true}
           defaultPeriod={chartPeriod}
           visualizationType={visualizationType}
+          customData={customChartData}
         />
 
         <ShareMenu
