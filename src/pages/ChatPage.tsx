@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageSquareDashed,
@@ -6,26 +5,36 @@ import {
   RefreshCcw,
   Send,
 } from 'lucide-react';
-import { cn } from '@lib/utils';
 import Header from '@/components/Header';
 import type { ChartPeriod } from '@hooks/useChartData';
-import { Conversation } from '@elevenlabs/client';
 import { MessageChart } from '@/components/MessageChart';
 import { useNavigation } from '@/contexts/NavigationContext';
+import { useConversation } from '@/hooks/useConversation';
+import { ChatMessage } from '@/components/ChatMessage';
+import { LoadingIndicator } from '@/components/LoadingIndicator';
+import { useScrollToBottom } from '@/hooks/useScrollToBottom';
+import { usePreventScrollOnFocus } from '@/hooks/usePreventScrollOnFocus';
+
+interface ChartData {
+  name: string;
+  value: number;
+  date: string;
+}
 
 interface Message {
-  id?: string;
+  id: string;
   message: string;
   source: 'user' | 'ai';
   showChart?: boolean;
   chartPeriod?: ChartPeriod;
   visualizationType?: 'sales' | 'products' | 'customers' | 'general';
-  chartData?: Array<{
-    name: string;
-    value: number;
-    date: string;
-  }>;
+  chartData?: ChartData[];
 }
+
+const INITIAL_MESSAGE_DELAY = 2000;
+const CHART_DISPLAY_DELAY = 3000;
+const SCROLL_DELAY = 100;
+const DEFAULT_VOLUME = 0.5;
 
 function ChatPage() {
   const { initialMessage, setInitialMessage } = useNavigation();
@@ -35,36 +44,9 @@ function ChatPage() {
   const [showUserListening, setShowUserListening] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const conversationRef = useRef<any>(null);
+  const messagesContainerRef = useScrollToBottom([messages], SCROLL_DELAY);
 
-  useEffect(() => {
-    const handleFocus = (e: FocusEvent) => {
-      if (e.target === inputRef.current) {
-        e.preventDefault();
-        window.scrollTo(0, 0);
-        document.body.scrollTop = 0;
-        document.documentElement.scrollTop = 0;
-
-        if (containerRef.current) {
-          containerRef.current.scrollTop = 0;
-        }
-      }
-    };
-
-    const input = inputRef.current;
-    if (input) {
-      input.addEventListener('focus', handleFocus, { passive: false });
-      input.addEventListener('click', handleFocus, { passive: false });
-    }
-
-    return () => {
-      if (input) {
-        input.removeEventListener('focus', handleFocus);
-        input.removeEventListener('click', handleFocus);
-      }
-    };
-  }, []);
+  usePreventScrollOnFocus(inputRef, containerRef);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -72,111 +54,81 @@ function ChatPage() {
     }
   }, [messages]);
 
-  useEffect(() => {
-    const scrollToBottom = () => {
-      if (messagesContainerRef.current) {
-        messagesContainerRef.current.scrollTop =
-          messagesContainerRef.current.scrollHeight;
-      }
-    };
 
-    setTimeout(scrollToBottom, 100);
-  }, [messages]);
+  const handleMessage = useCallback(
+    (message: any) => {
+      const messageWithId: Message = {
+        ...message,
+        id: message.id || Date.now().toString(),
+      };
+      
+      setMessages(prev => {
+        let initialMessageWithId: Message | null = null;
 
-  const initiate = useCallback(async () => {
-    try {
-      const conversation = await Conversation.startSession({
-        agentId: import.meta.env.VITE_AGENT_ID,
-        onMessage: message => {
-          const messageWithId = {
-            ...message,
-            id: (message as any).id || Date.now().toString(),
-          };
-          setMessages(prev => {
-            let initialMessageWithId = null;
+        setShowUserListening(message.source === 'ai');
 
-            if (message.source === 'ai') {
-              setShowUserListening(true);
-            } else {
-              setShowUserListening(false);
-            }
-
-            console.log('prev', prev, initialMessage);
-
-            if (!prev?.length && initialMessage) {
-              console.log('initialMessage', initialMessage);
-              setTimeout(() => {
-                (conversationRef?.current as any)?.connection?.sendMessage({
-                  type: 'user_message',
-                  text: initialMessage,
-                });
-                setInitialMessage(null);
-              }, 300);
-              setShowUserListening(false);
-              initialMessageWithId = {
-                message: initialMessage,
-                source: 'user' as const,
-                id: Date.now().toString() + 2,
-              };
-            }
-
-            conversationRef?.current.setVolume({ volume: 0.5 });
-
-            let result = [...prev, messageWithId];
-
-            if (initialMessageWithId) {
-              result = [...result, initialMessageWithId];
-            }
-
-            return result;
-          });
-        },
-        onDisconnect: () => {
-          setMessages(prev => [
-            ...prev,
-            { message: 'Session Ended', source: 'ai' as const, id: '0' },
-          ]);
+        if (!prev?.length && initialMessage) {
+          setTimeout(() => {
+            sendMessage(initialMessage);
+            setInitialMessage(null);
+          }, INITIAL_MESSAGE_DELAY);
+          
           setShowUserListening(false);
-        },
-        clientTools: {
-          generate_table: ({ data }) => {
-            setTimeout(() => {
-              setMessages(prev => [
-                ...prev,
-                {
-                  id: Date.now().toString(),
-                  message: '',
-                  source: 'ai',
-                  showChart: true,
-                  chartData: data,
-                  visualizationType: 'general',
-                  chartPeriod: 'month',
-                },
-              ]);
-            }, 3000);
-          },
-        },
+          initialMessageWithId = {
+            message: initialMessage,
+            source: 'user',
+            id: `${Date.now()}-initial`,
+          };
+        }
+
+        let result = [...prev, messageWithId];
+        if (initialMessageWithId) {
+          result = [...result, initialMessageWithId];
+        }
+
+        return result;
       });
+    },
+    [initialMessage, setInitialMessage]
+  );
 
-      // if (text) {
-      //   conversation.setVolume({ volume: 0 });
-      // }
-
-      conversationRef.current = conversation;
-    } catch (error) {
-      console.log('initiate - error', error);
-    }
-  }, [initialMessage, setInitialMessage]);
-
-  useEffect(() => {
-    initiate();
-
-    return () => {
-      (conversationRef?.current as any)?.handleEndSession?.();
-    };
+  const handleDisconnect = useCallback(() => {
+    setMessages(prev => [
+      ...prev,
+      { 
+        message: 'Session Ended', 
+        source: 'ai', 
+        id: 'disconnected' 
+      },
+    ]);
+    setShowUserListening(false);
   }, []);
 
-  const { status, mode } = conversationRef?.current || {};
+  const clientTools = {
+    generate_table: ({ data }: { data: ChartData[] }) => {
+      setTimeout(() => {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            message: '',
+            source: 'ai',
+            showChart: true,
+            chartData: data,
+            visualizationType: 'general',
+            chartPeriod: 'month',
+          },
+        ]);
+      }, CHART_DISPLAY_DELAY);
+    },
+  };
+
+  const { conversation, status, mode, sendMessage, initiate } = useConversation({
+    onMessage: handleMessage,
+    onDisconnect: handleDisconnect,
+    clientTools,
+  });
+
 
   useEffect(() => {
     if (status === 'disconnected') {
@@ -185,7 +137,7 @@ function ChatPage() {
   }, [status]);
 
   const handleSendMessage = () => {
-    if (!inputValue.trim() || !conversationRef.current) return;
+    if (!inputValue.trim() || !conversation) return;
 
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -195,12 +147,7 @@ function ChatPage() {
 
     setMessages(prev => [...prev, newMessage]);
     setInputValue('');
-
-    (conversationRef.current as any)?.connection?.sendMessage({
-      type: 'user_message',
-      text: inputValue.trim(),
-    });
-
+    sendMessage(inputValue.trim());
     setShowUserListening(false);
   };
 
@@ -238,30 +185,6 @@ function ChatPage() {
           ref={messagesContainerRef}
           className="flex flex-col flex-1 gap-4 p-4 mt-6 overflow-y-auto border-none bg-stone-100 dark:bg-stone-800 rounded-t-3xl -webkit-overflow-scrolling-touch overscroll-none"
         >
-          {/* {!messages?.length ? (
-            <div className="flex flex-col gap-8 my-auto">
-              <div className="font-euclid text-stone-400">
-                To start communication please send a message or start audio
-                session
-              </div>
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={handleVoiceClick}
-                  className="flex items-center justify-center gap-2 p-3 transition-colors bg-white rounded-full dark:bg-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 font-euclid-m text-stone-300"
-                >
-                  <AudioLines className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                  Start Voice Chat
-                </button>
-                <button
-                  onClick={() => inputRef.current?.focus()}
-                  className="flex items-center justify-center gap-2 p-3 transition-colors bg-white rounded-full dark:bg-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 font-euclid-m text-stone-300"
-                >
-                  <Send className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                  Send Message
-                </button>
-              </div>
-            </div>
-          ) : null} */}
 
           {!status && (
             <div className="flex flex-col items-center gap-4 my-auto">
@@ -274,27 +197,7 @@ function ChatPage() {
 
           {messages.map(message => (
             <div key={message.id} className="space-y-2 border-none">
-              {message?.message && (
-                <div
-                  className={cn(
-                    'flex border-none',
-                    message.source === 'user' ? 'justify-end' : 'justify-start'
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'flex flex-col max-w-[80%] p-3 rounded-2xl border-none',
-                      message.source === 'user'
-                        ? 'bg-rose-800 text-white'
-                        : 'bg-stone-200 dark:bg-stone-900 text-gray-900 dark:text-gray-100'
-                    )}
-                  >
-                    <p className="text-left text-md font-euclid">
-                      {message.message}
-                    </p>
-                  </div>
-                </div>
-              )}
+              <ChatMessage message={message.message} source={message.source} />
               {message.showChart && (
                 <MessageChart
                   messageId={message.id}
@@ -316,35 +219,11 @@ function ChatPage() {
             </button>
           )}
 
-          {showUserListening && (
-            <div className="flex justify-end">
-              <div className="p-5 rounded-full bg-rose-800">
-                <div className="flex items-center space-x-2">
-                  <div className="flex space-x-1">
-                    <div className="w-1 h-1 bg-white rounded-full animate-bounce" />
-                    <div className="w-1 h-1 bg-white rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <div className="w-1 h-1 bg-white rounded-full animate-bounce [animation-delay:0.4s]" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {showUserListening && <LoadingIndicator isUser />}
 
           {status === 'connected' &&
             !showUserListening &&
-            messages.length > 0 && (
-              <div className="flex justify-start">
-                <div className="p-5 rounded-full bg-stone-100 dark:bg-stone-900">
-                  <div className="flex items-center space-x-2">
-                    <div className="flex space-x-1">
-                      <div className="w-1 h-1 rounded-full bg-stone-600 dark:bg-stone-400 animate-bounce" />
-                      <div className="w-1 h-1 bg-stone-600 dark:bg-stone-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                      <div className="w-1 h-1 bg-stone-600 dark:bg-stone-400 rounded-full animate-bounce [animation-delay:0.4s]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            messages.length > 0 && <LoadingIndicator />}
         </div>
 
         <div className="w-full p-4 bg-white border-t dark:border-stone-700 dark:bg-stone-900 border-stone-200">
