@@ -10,15 +10,15 @@ export const LoadingIndicator = ({ isUser = false }: LoadingIndicatorProps) => {
 
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`p-5 rounded-full ${bgColor}`}>
+      <div className={`p-4 sm:p-5 rounded-full ${bgColor}`}>
         <div className="flex items-center space-x-2">
           <div className="flex space-x-1">
-            <div className={`w-1 h-1 ${dotColor} rounded-full animate-bounce`} />
+            <div className={`w-0.5 h-0.5 sm:w-1 sm:h-1 ${dotColor} rounded-full animate-bounce`} />
             <div
-              className={`w-1 h-1 ${dotColor} rounded-full animate-bounce [animation-delay:0.2s]`}
+              className={`w-0.5 h-0.5 sm:w-1 sm:h-1 ${dotColor} rounded-full animate-bounce [animation-delay:0.2s]`}
             />
             <div
-              className={`w-1 h-1 ${dotColor} rounded-full animate-bounce [animation-delay:0.4s]`}
+              className={`w-0.5 h-0.5 sm:w-1 sm:h-1 ${dotColor} rounded-full animate-bounce [animation-delay:0.4s]`}
             />
           </div>
         </div>

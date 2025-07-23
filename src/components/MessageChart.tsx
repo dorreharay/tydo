@@ -85,7 +85,7 @@ export const MessageChart: React.FC<MessageChartProps> = ({
       </div>
 
       {/* Visible content */}
-      <div className="mt-4 space-y-2 border-none">
+      <div className="mt-3 sm:mt-4 space-y-2 border-none">
         <SalesDataVisualization
           showTable={true}
           defaultPeriod={chartPeriod}
