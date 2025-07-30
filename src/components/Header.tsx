@@ -1,8 +1,9 @@
-import { ArrowLeft, AudioLines } from 'lucide-react';
+import { ArrowLeft, AudioLines, BarChart2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import ThemeToggle from '@components/ThemeToggle';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { useChartStream } from '@/hooks/useChartStream';
 
 type Props = {
   isLive?: boolean;
@@ -12,6 +13,8 @@ type Props = {
 
 function Header({ isLive, canGoBack, children }: Props) {
   const navigate = useNavigate();
+  const { chartDataItems, setChartStreamVisible } = useChartStream();
+
   return (
     <div className="flex items-center justify-between gap-2 sm:gap-4">
       <div className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
@@ -19,7 +22,7 @@ function Header({ isLive, canGoBack, children }: Props) {
           <button
             onClick={() => navigate(-1)}
             className="p-2.5 sm:p-3 transition-colors duration-200 rounded-full cursor-pointer bg-stone-100 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-600"
-            aria-label="Toggle theme"
+            aria-label="Go back"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
@@ -42,7 +45,20 @@ function Header({ isLive, canGoBack, children }: Props) {
         )}
       </div>
 
-      <div className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setChartStreamVisible(true)}
+          className="relative p-2.5 sm:p-3 transition-colors duration-200 rounded-full cursor-pointer bg-stone-100 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-600"
+          aria-label="Chart Stream"
+          title="Chart Stream"
+        >
+          <BarChart2 className="w-4 h-4 sm:w-5 sm:h-5" />
+          {chartDataItems.length > 0 && (
+            <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 text-xs font-bold bg-rose-800 text-white rounded-full px-1">
+              {chartDataItems.length}
+            </span>
+          )}
+        </button>
         <ThemeToggle />
       </div>
     </div>

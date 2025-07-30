@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageSquareDashed,
@@ -5,48 +6,75 @@ import {
   RefreshCcw,
   Send,
 } from 'lucide-react';
+import { cn } from '@lib/utils';
 import Header from '@/components/Header';
 import type { ChartPeriod } from '@hooks/useChartData';
+import { Conversation } from '@elevenlabs/client';
 import { MessageChart } from '@/components/MessageChart';
 import { useNavigation } from '@/contexts/NavigationContext';
-import { useConversation } from '@/hooks/useConversation';
-import { ChatMessage } from '@/components/ChatMessage';
-import { LoadingIndicator } from '@/components/LoadingIndicator';
-import { useScrollToBottom } from '@/hooks/useScrollToBottom';
-import { usePreventScrollOnFocus } from '@/hooks/usePreventScrollOnFocus';
-
-interface ChartData {
-  name: string;
-  value: number;
-  date: string;
-}
+import { uniqueId } from 'lodash';
+import { useChartStream } from '@/hooks/useChartStream';
+import { ChartStream } from '@/components/ChartStream';
 
 interface Message {
-  id: string;
+  id?: string;
   message: string;
   source: 'user' | 'ai';
   showChart?: boolean;
   chartPeriod?: ChartPeriod;
   visualizationType?: 'sales' | 'products' | 'customers' | 'general';
-  chartData?: ChartData[];
+  chartData?: Array<{
+    name: string;
+    value: number;
+    date: string;
+  }>;
 }
-
-const INITIAL_MESSAGE_DELAY = 2000;
-const CHART_DISPLAY_DELAY = 3000;
-const SCROLL_DELAY = 100;
-const DEFAULT_VOLUME = 0.5;
 
 function ChatPage() {
   const { initialMessage, setInitialMessage } = useNavigation();
+  const { addChartData } = useChartStream();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
 
   const [showUserListening, setShowUserListening] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useScrollToBottom([messages], SCROLL_DELAY);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const conversationRef = useRef<any>(null);
+  const addChartDataRef = useRef(addChartData);
 
-  usePreventScrollOnFocus(inputRef, containerRef);
+  // Keep the ref updated
+  useEffect(() => {
+    addChartDataRef.current = addChartData;
+  }, [addChartData]);
+
+  useEffect(() => {
+    const handleFocus = (e: FocusEvent) => {
+      if (e.target === inputRef.current) {
+        e.preventDefault();
+        window.scrollTo(0, 0);
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+
+        if (containerRef.current) {
+          containerRef.current.scrollTop = 0;
+        }
+      }
+    };
+
+    const input = inputRef.current;
+    if (input) {
+      input.addEventListener('focus', handleFocus, { passive: false });
+      input.addEventListener('click', handleFocus, { passive: false });
+    }
+
+    return () => {
+      if (input) {
+        input.removeEventListener('focus', handleFocus);
+        input.removeEventListener('click', handleFocus);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -54,81 +82,132 @@ function ChatPage() {
     }
   }, [messages]);
 
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop =
+          messagesContainerRef.current.scrollHeight;
+      }
+    };
 
-  const handleMessage = useCallback(
-    (message: any) => {
-      const messageWithId: Message = {
-        ...message,
-        id: message.id || Date.now().toString(),
-      };
-      
-      setMessages(prev => {
-        let initialMessageWithId: Message | null = null;
+    setTimeout(scrollToBottom, 100);
+  }, [messages]);
 
-        setShowUserListening(message.source === 'ai');
-
-        if (!prev?.length && initialMessage) {
-          setTimeout(() => {
-            sendMessage(initialMessage);
-            setInitialMessage(null);
-          }, INITIAL_MESSAGE_DELAY);
-          
-          setShowUserListening(false);
-          initialMessageWithId = {
-            message: initialMessage,
-            source: 'user',
-            id: `${Date.now()}-initial`,
+  const initiate = useCallback(async () => {
+    try {
+      const conversation = await Conversation.startSession({
+        agentId: import.meta.env.VITE_AGENT_ID,
+        onMessage: message => {
+          const messageWithId = {
+            ...message,
+            id: (message as any).id || Date.now().toString(),
           };
-        }
+          console.log('message', message);
+          setMessages(prev => {
+            let initialMessageWithId = null;
 
-        let result = [...prev, messageWithId];
-        if (initialMessageWithId) {
-          result = [...result, initialMessageWithId];
-        }
+            if (message.source === 'ai') {
+              setShowUserListening(true);
+            } else {
+              setShowUserListening(false);
+            }
 
-        return result;
-      });
-    },
-    [initialMessage, setInitialMessage]
-  );
+            if (!prev?.length && initialMessage) {
+              console.log('initialMessage', initialMessage);
+              setTimeout(() => {
+                (conversationRef?.current as any)?.connection?.sendMessage({
+                  type: 'user_message',
+                  text: initialMessage,
+                });
+                setInitialMessage(null);
+              }, 300);
+              setShowUserListening(false);
+              initialMessageWithId = {
+                message: initialMessage,
+                source: 'user' as const,
+                id: uniqueId(),
+              };
+            }
 
-  const handleDisconnect = useCallback(() => {
-    setMessages(prev => [
-      ...prev,
-      { 
-        message: 'Session Ended', 
-        source: 'ai', 
-        id: 'disconnected' 
-      },
-    ]);
-    setShowUserListening(false);
-  }, []);
+            conversationRef?.current.setVolume({ volume: 0.5 });
 
-  const clientTools = {
-    generate_table: ({ data }: { data: ChartData[] }) => {
-      setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            message: '',
-            source: 'ai',
-            showChart: true,
-            chartData: data,
-            visualizationType: 'general',
-            chartPeriod: 'month',
+            let result = [...prev, messageWithId];
+
+            if (initialMessageWithId) {
+              result = [...result, initialMessageWithId];
+            }
+
+            return result;
+          });
+        },
+        onDisconnect: () => {
+          setMessages(prev => [
+            ...prev,
+            { message: 'Session Ended', source: 'ai' as const, id: '0' },
+          ]);
+          setShowUserListening(false);
+        },
+        clientTools: {
+          generate_table: ({ data }) => {
+            setTimeout(() => {
+              const chartMessage = {
+                id: Date.now().toString(),
+                message: '',
+                source: 'ai' as const,
+                showChart: true,
+                chartData: data,
+                visualizationType: 'general' as const,
+                chartPeriod: 'month' as ChartPeriod,
+              };
+              
+              // Add to messages
+              setMessages(prev => [...prev, chartMessage]);
+              
+              // Also add to chart stream
+              addChartDataRef.current({
+                data: data,
+                visualizationType: 'general',
+                chartPeriod: 'month',
+                title: `Chart ${new Date().toLocaleTimeString()}`,
+              });
+            }, 3000);
           },
-        ]);
-      }, CHART_DISPLAY_DELAY);
-    },
-  };
+          logBase64: data => {
+            console.log('logBase64 - data', data);
+          },
+          demoChart: data => {
+            console.log('demoChart - data', data);
+          },
+          generate_chart: data => {
+            console.log('generate_chart - data', data);
+          },
+          AndriiNgrok8_generate_chart: data => {
+            console.log('AndriiNgrok8_generate_chart - data', data);
+          },
+        },
+      });
 
-  const { conversation, status, mode, sendMessage, initiate } = useConversation({
-    onMessage: handleMessage,
-    onDisconnect: handleDisconnect,
-    clientTools,
-  });
+      // if (text) {
+      //   conversation.setVolume({ volume: 0 });
+      // }
 
+      console.log('conversation', conversation);
+
+      conversationRef.current = conversation;
+    } catch (error) {
+      console.log('initiate - error', error);
+    }
+  }, [initialMessage, setInitialMessage]);
+
+  useEffect(() => {
+    initiate();
+
+    return () => {
+      (conversationRef?.current as any)?.handleEndSession?.();
+    };
+  }, [initiate]);
+
+  const { status, mode } = conversationRef?.current || {};
 
   useEffect(() => {
     if (status === 'disconnected') {
@@ -137,17 +216,22 @@ function ChatPage() {
   }, [status]);
 
   const handleSendMessage = () => {
-    if (!inputValue.trim() || !conversation) return;
+    if (!inputValue.trim() || !conversationRef.current) return;
 
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: uniqueId(),
       message: inputValue.trim(),
       source: 'user',
     };
 
     setMessages(prev => [...prev, newMessage]);
     setInputValue('');
-    sendMessage(inputValue.trim());
+
+    (conversationRef.current as any)?.connection?.sendMessage({
+      type: 'user_message',
+      text: inputValue.trim(),
+    });
+
     setShowUserListening(false);
   };
 
@@ -159,12 +243,14 @@ function ChatPage() {
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="overflow-hidden text-gray-900 transition-all duration-100 h-screen-safe dark:bg-stone-900 dark:text-gray-100"
-    >
-      <div className="flex flex-col h-full pt-2 sm:pt-4 mx-auto max-w-7xl">
-        <div className="px-3 sm:px-4 md:px-6 lg:px-8">
+    <>
+      <ChartStream />
+      <div
+        ref={containerRef}
+        className="overflow-hidden text-gray-900 transition-all duration-100 h-screen-safe dark:bg-stone-900 dark:text-gray-100"
+      >
+      <div className="flex flex-col h-full pt-4 mx-auto">
+        <div className="px-4">
           <Header canGoBack={true}>
             <>
               {mode !== 'speaking' && (
@@ -183,13 +269,37 @@ function ChatPage() {
 
         <div
           ref={messagesContainerRef}
-          className="flex flex-col flex-1 gap-3 sm:gap-4 p-3 sm:p-4 md:p-6 mt-4 sm:mt-6 overflow-y-auto border-none bg-stone-100 dark:bg-stone-800 rounded-t-2xl sm:rounded-t-3xl -webkit-overflow-scrolling-touch overscroll-none"
+          className="flex flex-col flex-1 gap-4 p-4 mt-6 overflow-y-auto border-none bg-stone-100 dark:bg-stone-800 rounded-t-3xl -webkit-overflow-scrolling-touch overscroll-none"
         >
+          {/* {!messages?.length ? (
+            <div className="flex flex-col gap-8 my-auto">
+              <div className="font-euclid text-stone-400">
+                To start communication please send a message or start audio
+                session
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={handleVoiceClick}
+                  className="flex items-center justify-center gap-2 p-3 transition-colors bg-white rounded-full dark:bg-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 font-euclid-m text-stone-300"
+                >
+                  <AudioLines className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  Start Voice Chat
+                </button>
+                <button
+                  onClick={() => inputRef.current?.focus()}
+                  className="flex items-center justify-center gap-2 p-3 transition-colors bg-white rounded-full dark:bg-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 font-euclid-m text-stone-300"
+                >
+                  <Send className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  Send Message
+                </button>
+              </div>
+            </div>
+          ) : null} */}
 
           {!status && (
             <div className="flex flex-col items-center gap-4 my-auto">
-              <LoaderCircle className="relative w-10 h-10 sm:w-12 sm:h-12 text-stone-400 animate-spin" />
-              <p className="text-sm sm:text-md text-stone-600 dark:text-stone-400 font-euclid">
+              <LoaderCircle className="relative w-12 h-12 text-stone-400 animate-spin" />
+              <p className="text-md text-stone-600 dark:text-stone-400 font-euclid">
                 Connecting to Tydo...
               </p>
             </div>
@@ -197,7 +307,27 @@ function ChatPage() {
 
           {messages.map(message => (
             <div key={message.id} className="space-y-2 border-none">
-              <ChatMessage message={message.message} source={message.source} />
+              {message?.message && (
+                <div
+                  className={cn(
+                    'flex border-none',
+                    message.source === 'user' ? 'justify-end' : 'justify-start'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'flex flex-col max-w-[80%] p-3 rounded-2xl border-none',
+                      message.source === 'user'
+                        ? 'bg-rose-800 text-white'
+                        : 'bg-stone-200 dark:bg-stone-900 text-gray-900 dark:text-gray-100'
+                    )}
+                  >
+                    <p className="text-left text-md font-euclid">
+                      {message.message}
+                    </p>
+                  </div>
+                </div>
+              )}
               {message.showChart && (
                 <MessageChart
                   messageId={message.id}
@@ -212,42 +342,67 @@ function ChatPage() {
 
           {status === 'disconnected' && (
             <button
-              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-1.5 sm:py-2 mx-auto mb-20 transition-all border rounded-full text-stone-200 border-stone-200 w-fit font-euclid active:opacity-50 text-sm sm:text-base"
+              className="flex items-center justify-center gap-2 px-6 py-2 mx-auto mb-20 transition-all border rounded-full text-stone-200 border-stone-200 w-fit font-euclid active:opacity-50"
               onClick={initiate}
             >
-              Start Again <RefreshCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              Start Again <RefreshCcw className="w-4 h-4" />
             </button>
           )}
 
-          {showUserListening && <LoadingIndicator isUser />}
+          {showUserListening && (
+            <div className="flex justify-end">
+              <div className="p-5 rounded-full bg-rose-800">
+                <div className="flex items-center space-x-2">
+                  <div className="flex space-x-1">
+                    <div className="w-1 h-1 bg-white rounded-full animate-bounce" />
+                    <div className="w-1 h-1 bg-white rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <div className="w-1 h-1 bg-white rounded-full animate-bounce [animation-delay:0.4s]" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {status === 'connected' &&
             !showUserListening &&
-            messages.length > 0 && <LoadingIndicator />}
+            messages.length > 0 && (
+              <div className="flex justify-start">
+                <div className="p-5 rounded-full bg-stone-100 dark:bg-stone-900">
+                  <div className="flex items-center space-x-2">
+                    <div className="flex space-x-1">
+                      <div className="w-1 h-1 rounded-full bg-stone-600 dark:bg-stone-400 animate-bounce" />
+                      <div className="w-1 h-1 bg-stone-600 dark:bg-stone-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                      <div className="w-1 h-1 bg-stone-600 dark:bg-stone-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
         </div>
 
-        <div className="w-full p-3 sm:p-4 bg-white border-t dark:border-stone-700 dark:bg-stone-900 border-stone-200">
-          <div className="flex items-end w-full max-w-4xl gap-2 mx-auto px-2 sm:px-4 md:px-0">
+        <div className="w-full p-4 bg-white border-t dark:border-stone-700 dark:bg-stone-900 border-stone-200">
+          <div className="flex items-end max-w-4xl gap-2 mx-auto">
             <textarea
               ref={inputRef}
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder="Type a message..."
-              className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-full focus:outline-none resize-none min-h-[40px] sm:min-h-[48px] max-h-[100px] sm:max-h-[120px] font-euclid overflow-y-auto"
+              className="flex-1 px-4 py-3 text-base bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-full focus:outline-none resize-none min-h-[48px] max-h-[120px] font-euclid overflow-y-auto"
               rows={1}
             />
             <button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || status !== 'connected'}
-              className="p-2.5 sm:p-3 text-white transition-all duration-200 rounded-full bg-rose-800 hover:bg-rose-700 active:bg-rose-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-3 text-white transition-all duration-200 rounded-full bg-rose-800 hover:bg-rose-700 active:bg-rose-900 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Send className="w-5 h-5" />
             </button>
           </div>
         </div>
       </div>
     </div>
+    </>
   );
 }
 
