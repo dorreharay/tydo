@@ -14,14 +14,14 @@ interface ConversationHandlers {
   onStatusChange?: (status: string) => void;
 }
 
-interface ConversationInstance extends Conversation {
+type ConversationInstance = Conversation & {
   status?: string;
   mode?: string;
   connection?: {
     sendMessage: (message: { type: string; text: string }) => void;
   };
   handleEndSession?: () => void;
-}
+};
 
 export const useConversation = ({
   onMessage,
@@ -42,7 +42,7 @@ export const useConversation = ({
         clientTools,
       });
 
-      conversationRef.current = conversation;
+      conversationRef.current = conversation as ConversationInstance;
       conversation.setVolume({ volume: 0.5 });
     } catch (error) {
       console.error('Failed to initiate conversation:', error);
@@ -71,8 +71,9 @@ export const useConversation = ({
 
   useEffect(() => {
     if (conversationRef.current) {
-      const currentStatus = conversationRef.current.status;
-      const currentMode = conversationRef.current.mode;
+      const conversation = conversationRef.current as any;
+      const currentStatus = conversation.status;
+      const currentMode = conversation.mode;
       
       if (currentStatus !== status) {
         setStatus(currentStatus);
